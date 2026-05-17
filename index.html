@@ -371,7 +371,7 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <li>「内容を確認して登録」→「登録する」で完了</li>
       </ol>
       <div class="modal-tip">💡 修了済み・振替済みの受講者は自動で非表示になります。</div>
-      <a class="modal-btn blue" href="?page=form" onclick="showPage('form');return false">
+      <a class="modal-btn blue" href="https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec" target="_blank">
         📝 振替登録フォームを開く
       </a>
     </div>
@@ -392,7 +392,7 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <li>削除する場合は「削除」ボタンを押す</li>
       </ol>
       <div class="modal-warn">⚠ 削除は元に戻せません。慎重に操作してください。</div>
-      <a class="modal-btn blue" href="?page=form" onclick="showPage('form');return false">
+      <a class="modal-btn blue" href="https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec" target="_blank">
         📋 フォームを開いて一覧を確認
       </a>
     </div>
@@ -415,7 +415,7 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <li>「○件を書き込みました」と表示されたら完了</li>
       </ol>
       <div class="modal-tip">💡 取り込むたびに上書きされます。最新のCSVを使用してください。</div>
-      <a class="modal-btn" style="background:#148f77" href="?page=form" onclick="showPage('form');return false">
+      <a class="modal-btn" style="background:#148f77" href="https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec" target="_blank">
         🎬 フォームを開く
       </a>
     </div>
@@ -756,7 +756,7 @@ function showPage(page){
   if(page === 'form'){
     // GAS上では同じWebアプリの別URLに遷移
     // ローカルテスト時はform.htmlを直接開く
-    window.location.href = 'form.html';
+    window.open('https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec', '_blank');
   }
 }
 </script>
