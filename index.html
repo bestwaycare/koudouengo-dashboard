@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行動援護研修｜事務局ダッシュボード</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
+     background:#f0f4f8;color:#333;min-height:100vh}
+
+/* ── ヘッダー ── */
+.header{background:linear-gradient(135deg,#1a5276,#2980b9);
+        color:#fff;padding:14px 20px;display:flex;
+        align-items:center;justify-content:space-between;
+        box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.header-title{font-size:1.05rem;font-weight:700}
+.header-sub{font-size:.75rem;opacity:.8;margin-top:2px}
+.header-date{font-size:.8rem;opacity:.8;text-align:right}
+
+/* ── メインレイアウト ── */
+.main{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+      padding:20px;max-width:1100px;margin:0 auto}
+
+/* ── カラムヘッダー ── */
+.col-header{text-align:center;padding:10px;margin-bottom:12px;
+            border-radius:6px;font-size:.85rem;font-weight:700;
+            letter-spacing:.05em}
+.col-header.daily  {background:#1a5276;color:#fff}
+.col-header.sometimes{background:#555;color:#fff}
+.col-header.setup  {background:#2e4057;color:#fff}
+.col-header small{display:block;font-size:.68rem;font-weight:400;
+                  opacity:.8;margin-top:2px}
+
+/* ── セクション ── */
+.section{background:#fff;border-radius:8px;
+         box-shadow:0 1px 4px rgba(0,0,0,.08);
+         margin-bottom:10px;overflow:hidden}
+.section-title{font-size:.78rem;font-weight:700;color:#fff;
+               padding:7px 12px;letter-spacing:.04em}
+.section-title.blue   {background:#1a5276}
+.section-title.teal   {background:#148f77}
+.section-title.orange {background:#ca6f1e}
+.section-title.gray   {background:#5d6d7e}
+.section-title.purple {background:#6c3483}
+.section-title.red    {background:#922b21}
+.section-title.green  {background:#1e8449}
+
+/* ── アイテム ── */
+.item{display:flex;align-items:center;gap:10px;
+      padding:9px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;
+      transition:background .15s;text-decoration:none;color:inherit}
+.item:last-child{border-bottom:none}
+.item:hover{background:#eaf4ff}
+.item:active{background:#d6eaf8}
+.item-icon{width:28px;height:28px;border-radius:6px;display:flex;
+           align-items:center;justify-content:center;
+           font-size:15px;flex-shrink:0}
+.item-icon.blue   {background:#d6eaf8;color:#1a5276}
+.item-icon.green  {background:#d5f5e3;color:#1e8449}
+.item-icon.orange {background:#fde8d8;color:#ca6f1e}
+.item-icon.purple {background:#e8daef;color:#6c3483}
+.item-icon.red    {background:#fde8e8;color:#922b21}
+.item-icon.gray   {background:#eaecee;color:#5d6d7e}
+.item-icon.teal   {background:#d1f2eb;color:#148f77}
+.item-icon.yellow {background:#fef9e7;color:#b7950b}
+
+.item-text{flex:1;font-size:.85rem;font-weight:500;line-height:1.3}
+.item-sub{font-size:.7rem;color:#888;font-weight:400;margin-top:1px}
+.item-badge{font-size:.65rem;padding:2px 7px;border-radius:10px;
+            font-weight:700;white-space:nowrap;flex-shrink:0}
+.badge-auto{background:#d5f5e3;color:#1e8449}
+.badge-manual{background:#fde8d8;color:#ca6f1e}
+.badge-setup{background:#e8daef;color:#6c3483}
+.badge-ext{background:#d6eaf8;color:#1a5276}
+.arrow{color:#bbb;font-size:.75rem;flex-shrink:0;margin-left:2px}
+
+/* ── ステータスバー ── */
+.status-bar{background:#fff;border-radius:8px;
+            box-shadow:0 1px 4px rgba(0,0,0,.08);
+            padding:10px 14px;margin:0 20px 16px;
+            max-width:1100px;margin-left:auto;margin-right:auto;
+            display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.status-item{display:flex;align-items:center;gap:6px;font-size:.8rem}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-green{background:#27ae60}
+.dot-blue {background:#2980b9}
+.dot-gray {background:#aaa}
+.status-label{color:#555}
+.status-val{font-weight:700;color:#333}
+
+/* ── モーダル ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+         z-index:100;align-items:center;justify-content:center;padding:16px}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:12px;padding:0;width:100%;max-width:500px;
+       box-shadow:0 8px 32px rgba(0,0,0,.25);overflow:hidden}
+.modal-header{padding:16px 20px;color:#fff;display:flex;
+              align-items:center;gap:10px}
+.modal-header.blue  {background:#1a5276}
+.modal-header.green {background:#1e8449}
+.modal-header.orange{background:#ca6f1e}
+.modal-header.purple{background:#6c3483}
+.modal-header.gray  {background:#5d6d7e}
+.modal-header h3{font-size:1rem;flex:1}
+.modal-close{cursor:pointer;opacity:.8;font-size:1.2rem;
+             background:none;border:none;color:#fff}
+.modal-body{padding:20px}
+.modal-body p{font-size:.9rem;color:#555;line-height:1.7;margin-bottom:12px}
+.modal-steps{list-style:none;counter-reset:step}
+.modal-steps li{counter-increment:step;display:flex;gap:10px;
+                padding:8px 0;border-bottom:1px dashed #eee;font-size:.88rem;
+                color:#333;line-height:1.5}
+.modal-steps li::before{content:counter(step);background:#1a5276;color:#fff;
+  border-radius:50%;width:22px;height:22px;display:flex;align-items:center;
+  justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;
+  margin-top:1px}
+.modal-steps li:last-child{border-bottom:none}
+.modal-btn{display:block;text-align:center;padding:11px;
+           border-radius:7px;font-size:.95rem;font-weight:700;
+           text-decoration:none;color:#fff;margin-top:14px;
+           transition:opacity .2s}
+.modal-btn:hover{opacity:.85}
+.modal-btn.blue  {background:#1a5276}
+.modal-btn.green {background:#1e8449}
+.modal-btn.orange{background:#ca6f1e}
+.modal-btn.gray  {background:#5d6d7e}
+.modal-btn.ext   {background:#2980b9}
+.modal-warn{background:#fde8e8;border:1px solid #f5a6a6;border-radius:6px;
+            padding:9px 12px;font-size:.82rem;color:#c0392b;margin-top:10px;
+            line-height:1.6}
+.modal-tip{background:#eaf4ff;border:1px solid #aed6f7;border-radius:6px;
+           padding:9px 12px;font-size:.82rem;color:#1a5276;margin-top:10px;
+           line-height:1.6}
+
+/* ── レスポンシブ ── */
+@media(max-width:700px){
+  .main{grid-template-columns:1fr}
+  .status-bar{margin:0 10px 14px;gap:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="header">
+  <div>
+    <div class="header-title">🏫 行動援護従業者養成研修　事務局ダッシュボード</div>
+    <div class="header-sub">操作したい項目をクリックしてください</div>
+  </div>
+  <div class="header-date" id="now"></div>
+</div>
+
+<!-- ステータスバー -->
+<div class="status-bar" style="margin-top:16px">
+  <div class="status-item">
+    <div class="status-dot dot-green"></div>
+    <span class="status-label">自動処理</span>
+    <span class="status-val">稼働中（毎朝8:00）</span>
+  </div>
+  <div class="status-item">
+    <div class="status-dot dot-blue"></div>
+    <span class="status-label">メール送信先</span>
+    <span class="status-val">staff@e-bestway.net</span>
+  </div>
+  <div class="status-item">
+    <div class="status-dot dot-green"></div>
+    <span class="status-label">GitHub Actions</span>
+    <span class="status-val">bestwaycare/koudouengo-attendance</span>
+  </div>
+</div>
+
+<!-- メインコンテンツ -->
+<div class="main">
+
+  <!-- ── 列1: 日々使う ── -->
+  <div>
+    <div class="col-header daily">〈 日々使う項目 〉<small>研修運営のメイン操作</small></div>
+
+    <div class="section">
+      <div class="section-title blue">振替登録</div>
+      <a class="item" onclick="openModal('transfer-form')">
+        <div class="item-icon blue">📝</div>
+        <div class="item-text">振替登録フォームを開く
+          <div class="item-sub">欠席者の振替出席を登録する</div>
+        </div>
+        <span class="item-badge badge-manual">手動</span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openModal('transfer-list')">
+        <div class="item-icon blue">📋</div>
+        <div class="item-text">登録済み振替一覧を確認
+          <div class="item-sub">過去の振替記録を確認・削除</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
+      <div class="section-title teal">動画視聴</div>
+      <a class="item" onclick="openModal('video-csv')">
+        <div class="item-icon teal">🎬</div>
+        <div class="item-text">動画視聴CSVを取り込む
+          <div class="item-sub">LMSからDLしたCSVをアップロード</div>
+        </div>
+        <span class="item-badge badge-manual">手動</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
+      <div class="section-title gray">確認・参照</div>
+      <a class="item" onclick="openModal('check-mail')">
+        <div class="item-icon gray">📧</div>
+        <div class="item-text">メールを確認する
+          <div class="item-sub">出席簿PDF・修了証完了通知が届く</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openModal('check-kintone')">
+        <div class="item-icon orange">🏢</div>
+        <div class="item-text">kintone を開く
+          <div class="item-sub">受講者・修了者情報を確認</div>
+        </div>
+        <span class="item-badge badge-ext">外部</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── 列2: 時々使う ── -->
+  <div>
+    <div class="col-header sometimes">〈 時々行う作業 〉<small>必要なときだけ操作</small></div>
+
+    <div class="section">
+      <div class="section-title orange">出席簿</div>
+      <a class="item" onclick="openModal('pdf-manual')">
+        <div class="item-icon orange">📄</div>
+        <div class="item-text">出席簿を手動で生成する
+          <div class="item-sub">通常は自動生成（3日前）</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openModal('pdf-check')">
+        <div class="item-icon orange">✉️</div>
+        <div class="item-text">出席簿PDFを再送してもらう
+          <div class="item-sub">GitHub Actionsを手動トリガー</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
+      <div class="section-title purple">修了証</div>
+      <a class="item" onclick="openModal('cert-check')">
+        <div class="item-icon purple">🎓</div>
+        <div class="item-text">修了証の発行状況を確認
+          <div class="item-sub">kintoneで修了者番号を確認</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openModal('cert-manual')">
+        <div class="item-icon purple">⚡</div>
+        <div class="item-text">修了証を手動発行する
+          <div class="item-sub">自動処理で漏れた場合の対応</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
+      <div class="section-title gray">スプレッドシート</div>
+      <a class="item" onclick="openModal('sheet-open')">
+        <div class="item-icon green">📊</div>
+        <div class="item-text">スプレッドシートを開く
+          <div class="item-sub">受講者データ・振替データ確認</div>
+        </div>
+        <span class="item-badge badge-ext">外部</span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openModal('sheet-add')">
+        <div class="item-icon green">➕</div>
+        <div class="item-text">新しいコースを追加する
+          <div class="item-sub">申し込みデータを行動援護シートに入力</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── 列3: 最初に設定 ── -->
+  <div>
+    <div class="col-header setup">〈 最初に設定する項目 〉<small>初回・変更時のみ</small></div>
+
+    <div class="section">
+      <div class="section-title gray">GitHub Actions</div>
+      <a class="item" onclick="openModal('gh-status')">
+        <div class="item-icon gray">⚙️</div>
+        <div class="item-text">自動処理の実行ログを確認
+          <div class="item-sub">エラーがないか確認する</div>
+        </div>
+        <span class="item-badge badge-ext">GitHub</span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openModal('gh-secrets')">
+        <div class="item-icon gray">🔐</div>
+        <div class="item-text">Secrets（認証情報）を更新
+          <div class="item-sub">パスワード変更時に更新が必要</div>
+        </div>
+        <span class="item-badge badge-setup">設定</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
+      <div class="section-title red">GASフォーム</div>
+      <a class="item" onclick="openModal('gas-deploy')">
+        <div class="item-icon red">🚀</div>
+        <div class="item-text">フォームを再デプロイ
+          <div class="item-sub">フォームを更新したときに実行</div>
+        </div>
+        <span class="item-badge badge-setup">設定</span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openModal('gas-editor')">
+        <div class="item-icon red">✏️</div>
+        <div class="item-text">GASエディタを開く
+          <div class="item-sub">コードの確認・修正</div>
+        </div>
+        <span class="item-badge badge-ext">外部</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
+      <div class="section-title gray">Google Cloud</div>
+      <a class="item" onclick="openModal('gcp-cred')">
+        <div class="item-icon yellow">🔑</div>
+        <div class="item-text">サービスアカウント認証情報
+          <div class="item-sub">JSONキーの確認・再発行</div>
+        </div>
+        <span class="item-badge badge-setup">設定</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+
+<!-- ══════════════════════════════
+     モーダル定義
+══════════════════════════════ -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+<div class="modal" id="modal">
+
+  <!-- 振替フォームを開く -->
+  <div id="m-transfer-form" style="display:none">
+    <div class="modal-header blue">
+      <span style="font-size:1.3rem">📝</span>
+      <h3>振替登録フォームを開く</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>欠席した受講者の振替出席を登録します。</p>
+      <ol class="modal-steps">
+        <li>フォームを開く（下のボタンをクリック）</li>
+        <li><strong>STEP 1</strong>：欠席した日付を選ぶ</li>
+        <li><strong>STEP 2</strong>：受講者の名前を選ぶ</li>
+        <li><strong>STEP 3</strong>：振替先の日付を選ぶ</li>
+        <li>「内容を確認して登録」→「登録する」で完了</li>
+      </ol>
+      <div class="modal-tip">💡 修了済み・振替済みの受講者は自動で非表示になります。</div>
+      <a class="modal-btn blue" href="?page=form" onclick="showPage('form');return false">
+        📝 振替登録フォームを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- 振替一覧 -->
+  <div id="m-transfer-list" style="display:none">
+    <div class="modal-header blue">
+      <span style="font-size:1.3rem">📋</span>
+      <h3>登録済み振替一覧</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>これまでに登録された振替記録を確認・削除できます。</p>
+      <ol class="modal-steps">
+        <li>フォームを開く（下のボタン）</li>
+        <li>ページ下部の「登録済み振替一覧」を確認</li>
+        <li>削除する場合は「削除」ボタンを押す</li>
+      </ol>
+      <div class="modal-warn">⚠ 削除は元に戻せません。慎重に操作してください。</div>
+      <a class="modal-btn blue" href="?page=form" onclick="showPage('form');return false">
+        📋 フォームを開いて一覧を確認
+      </a>
+    </div>
+  </div>
+
+  <!-- 動画CSV -->
+  <div id="m-video-csv" style="display:none">
+    <div class="modal-header" style="background:#148f77">
+      <span style="font-size:1.3rem">🎬</span>
+      <h3>動画視聴CSVを取り込む</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>LMSからダウンロードした <strong>user-learning-lesson.csv</strong> を取り込みます。</p>
+      <ol class="modal-steps">
+        <li>LMSにログインしてCSVをダウンロード（Shift-JIS形式）</li>
+        <li>フォームを開く（下のボタン）</li>
+        <li>「動画視聴 CSV 取り込み」のエリアにファイルをドラッグ</li>
+        <li>「取り込む」ボタンをクリック</li>
+        <li>「○件を書き込みました」と表示されたら完了</li>
+      </ol>
+      <div class="modal-tip">💡 取り込むたびに上書きされます。最新のCSVを使用してください。</div>
+      <a class="modal-btn" style="background:#148f77" href="?page=form" onclick="showPage('form');return false">
+        🎬 フォームを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- メール確認 -->
+  <div id="m-check-mail" style="display:none">
+    <div class="modal-header gray">
+      <span style="font-size:1.3rem">📧</span>
+      <h3>メールを確認する</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>自動処理の結果が毎朝メールで届きます。</p>
+      <ol class="modal-steps">
+        <li><strong>staff@e-bestway.net</strong> の受信ボックスを確認</li>
+        <li>毎朝8時頃に届く</li>
+        <li>出席簿PDFはメールに添付されています</li>
+        <li>修了証発行完了もメールで通知されます</li>
+      </ol>
+      <div class="modal-tip">💡 メールが届かない場合はGitHub Actionsのログを確認してください。</div>
+      <a class="modal-btn gray" href="https://mail.google.com" target="_blank">
+        📧 Gmailを開く（bestway.mabuchi@gmail.com）
+      </a>
+    </div>
+  </div>
+
+  <!-- kintone -->
+  <div id="m-check-kintone" style="display:none">
+    <div class="modal-header orange">
+      <span style="font-size:1.3rem">🏢</span>
+      <h3>kintoneを開く</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>受講者情報・修了証の発行状況を確認できます。</p>
+      <ol class="modal-steps">
+        <li>kintoneにログイン</li>
+        <li>「行動援護」アプリを開く</li>
+        <li>「修了証発行したか」列で発行状況を確認</li>
+        <li>「修了者番号」列で番号を確認（例: 2026-001）</li>
+      </ol>
+      <div class="modal-tip">💡 修了証発行は自動処理されます。手動での変更は原則不要です。</div>
+      <a class="modal-btn orange" href="https://azoch3bdyyq2.cybozu.com/k/279/" target="_blank">
+        🏢 kintoneを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- 出席簿手動生成 -->
+  <div id="m-pdf-manual" style="display:none">
+    <div class="modal-header orange">
+      <span style="font-size:1.3rem">📄</span>
+      <h3>出席簿を手動で生成する</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>通常は研修3日前に自動生成されますが、緊急時は手動で実行できます。</p>
+      <ol class="modal-steps">
+        <li>GitHubにログイン（bestwaycare）</li>
+        <li>「koudouengo-attendance」リポジトリを開く</li>
+        <li>「Actions」タブをクリック</li>
+        <li>「行動援護 出席簿・修了証 自動処理」をクリック</li>
+        <li>「Run workflow」→「Run workflow」で手動実行</li>
+        <li>数分後にメールでPDFが届く</li>
+      </ol>
+      <a class="modal-btn gray" href="https://github.com/bestwaycare/koudouengo-attendance/actions" target="_blank">
+        ⚙️ GitHub Actionsを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- GitHub ステータス -->
+  <div id="m-gh-status" style="display:none">
+    <div class="modal-header gray">
+      <span style="font-size:1.3rem">⚙️</span>
+      <h3>自動処理の実行ログを確認</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>GitHub Actionsでエラーが出ていないか確認します。</p>
+      <ol class="modal-steps">
+        <li>GitHubにログイン（bestwaycare）</li>
+        <li>「koudouengo-attendance」リポジトリを開く</li>
+        <li>「Actions」タブをクリック</li>
+        <li>最新のワークフロー実行をクリック</li>
+        <li>緑のチェック ✅ = 正常、赤の × = エラー</li>
+        <li>エラーの場合はログ詳細でエラー内容を確認</li>
+      </ol>
+      <div class="modal-warn">⚠ 赤いエラーが続く場合はログを確認して担当者に連絡してください。</div>
+      <a class="modal-btn gray" href="https://github.com/bestwaycare/koudouengo-attendance/actions" target="_blank">
+        ⚙️ GitHub Actionsを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- GitHub Secrets -->
+  <div id="m-gh-secrets" style="display:none">
+    <div class="modal-header gray">
+      <span style="font-size:1.3rem">🔐</span>
+      <h3>Secrets（認証情報）を更新</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Gmailのパスワードなどを変更した場合に更新が必要です。</p>
+      <ol class="modal-steps">
+        <li>GitHubにログイン（bestwaycare）</li>
+        <li>「koudouengo-attendance」→「Settings」</li>
+        <li>「Secrets and variables」→「Actions」</li>
+        <li>更新したいSecretの鉛筆アイコンをクリック</li>
+        <li>新しい値を入力して「Update secret」</li>
+      </ol>
+      <div class="modal-tip">
+        💡 設定されているSecret一覧：<br>
+        GOOGLE_CREDENTIALS_JSON / GMAIL_ADDRESS<br>
+        GMAIL_APP_PASSWORD / EMAIL_RECIPIENT
+      </div>
+      <a class="modal-btn gray" href="https://github.com/bestwaycare/koudouengo-attendance/settings/secrets/actions" target="_blank">
+        🔐 GitHub Secretsを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- GASデプロイ -->
+  <div id="m-gas-deploy" style="display:none">
+    <div class="modal-header red">
+      <span style="font-size:1.3rem">🚀</span>
+      <h3>フォームを再デプロイ</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>フォームを更新した後は再デプロイが必要です。</p>
+      <ol class="modal-steps">
+        <li>GASエディタを開く（下のボタン）</li>
+        <li>更新したファイルを貼り付けて ⌘S で保存</li>
+        <li>右上「デプロイ」→「デプロイを管理」をクリック</li>
+        <li>鉛筆アイコン（✏️ 編集）をクリック</li>
+        <li>バージョンを「<strong>新バージョン</strong>」に変更 ← 重要！</li>
+        <li>「デプロイ」ボタンをクリックして完了</li>
+      </ol>
+      <div class="modal-warn">⚠「新バージョン」を選ばないと変更が反映されません。</div>
+      <a class="modal-btn red" href="https://script.google.com/home" target="_blank">
+        ✏️ GASエディタを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- 証明書なし -->
+  <div id="m-cert-check" style="display:none">
+    <div class="modal-header purple">
+      <span style="font-size:1.3rem">🎓</span>
+      <h3>修了証の発行状況を確認</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>kintoneで修了証の発行状況と修了者番号を確認できます。</p>
+      <ol class="modal-steps">
+        <li>kintoneにログイン</li>
+        <li>「行動援護」アプリを開く</li>
+        <li>「修了証発行したか」が「済」になっているか確認</li>
+        <li>「修了者番号」（例: 2026-001）を確認</li>
+        <li>「研修修了日」が正しく記録されているか確認</li>
+      </ol>
+      <div class="modal-tip">💡 研修2日目から7日以内に自動発行されます。発行されない場合は振替登録が未完了の可能性があります。</div>
+      <a class="modal-btn orange" href="https://azoch3bdyyq2.cybozu.com/k/279/" target="_blank">
+        🏢 kintoneを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- 修了証手動 -->
+  <div id="m-cert-manual" style="display:none">
+    <div class="modal-header purple">
+      <span style="font-size:1.3rem">⚡</span>
+      <h3>修了証を手動発行する</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>自動処理で漏れた場合は GitHub Actions を手動実行します。</p>
+      <ol class="modal-steps">
+        <li>振替登録が全員完了しているか先に確認</li>
+        <li>GitHubの「Actions」タブを開く</li>
+        <li>「Run workflow」で手動実行</li>
+        <li>研修2日目から7日以内のコースが対象になります</li>
+        <li>完了メールが届いたらkintoneで確認</li>
+      </ol>
+      <div class="modal-warn">⚠ 振替登録が残っている受講者は発行されません。先に振替登録を完了させてください。</div>
+      <a class="modal-btn gray" href="https://github.com/bestwaycare/koudouengo-attendance/actions" target="_blank">
+        ⚙️ GitHub Actionsを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- スプレッドシートを開く -->
+  <div id="m-sheet-open" style="display:none">
+    <div class="modal-header green">
+      <span style="font-size:1.3rem">📊</span>
+      <h3>スプレッドシートを開く</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>受講者データ・振替データが格納されています。</p>
+      <ol class="modal-steps">
+        <li>Googleスプレッドシートを開く（下のボタン）</li>
+        <li>「行動援護」シート：受講者の申し込みデータ</li>
+        <li>「振替データ」シート：振替登録の記録</li>
+        <li>「動画視聴」シート：動画視聴の進捗データ</li>
+      </ol>
+      <div class="modal-warn">⚠ 行動援護シートのデータを誤って削除しないよう注意してください。自動処理のデータソースです。</div>
+      <a class="modal-btn green" href="https://docs.google.com/spreadsheets/" target="_blank">
+        📊 スプレッドシートを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- コース追加 -->
+  <div id="m-sheet-add" style="display:none">
+    <div class="modal-header green">
+      <span style="font-size:1.3rem">➕</span>
+      <h3>新しいコースを追加する</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>新しい研修コースの申し込みデータをスプレッドシートに追加します。</p>
+      <ol class="modal-steps">
+        <li>Googleスプレッドシートの「行動援護」シートを開く</li>
+        <li>申し込みフォームのデータを貼り付け</li>
+        <li>コース名の形式を確認：<strong>「○月○日○日（曜）」</strong></li>
+        <li>例：「5月20日27日(水)」「6月8日22日(土)」</li>
+        <li>保存すれば次回の自動処理で読み込まれる</li>
+      </ol>
+      <div class="modal-warn">⚠ コース名の日付形式が違うと出席簿が生成されません。形式を正確に入力してください。</div>
+      <a class="modal-btn green" href="https://docs.google.com/spreadsheets/" target="_blank">
+        📊 スプレッドシートを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- GAS PDF再送 -->
+  <div id="m-pdf-check" style="display:none">
+    <div class="modal-header orange">
+      <span style="font-size:1.3rem">✉️</span>
+      <h3>出席簿PDFを再送してもらう</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>メールが届かなかった場合、GitHub Actionsを手動実行して再送できます。</p>
+      <ol class="modal-steps">
+        <li>GitHubにログイン（bestwaycare）</li>
+        <li>「koudouengo-attendance」→「Actions」を開く</li>
+        <li>「Run workflow」ボタンをクリック</li>
+        <li>「Run workflow」で実行</li>
+        <li>数分後に staff@e-bestway.net にメールが届く</li>
+      </ol>
+      <div class="modal-tip">💡 3日後に研修がある場合のみ出席簿が生成されます。</div>
+      <a class="modal-btn gray" href="https://github.com/bestwaycare/koudouengo-attendance/actions" target="_blank">
+        ⚙️ GitHub Actionsを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- GCPクレデンシャル -->
+  <div id="m-gcp-cred" style="display:none">
+    <div class="modal-header gray">
+      <span style="font-size:1.3rem">🔑</span>
+      <h3>サービスアカウント認証情報</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Google Cloud のサービスアカウントキーの確認・再発行手順です。</p>
+      <ol class="modal-steps">
+        <li>Google Cloud Console にログイン</li>
+        <li>プロジェクト「koudouengo」を選択</li>
+        <li>「IAM と管理」→「サービスアカウント」</li>
+        <li>「attendance-bot」のアカウントを選択</li>
+        <li>「キー」タブ →「鍵を追加」→「JSON」でDL</li>
+        <li>GitHub Secrets の GOOGLE_CREDENTIALS_JSON を更新</li>
+      </ol>
+      <div class="modal-warn">⚠ キーの再発行後は旧キーを削除し、GitHub Secretsも必ず更新してください。</div>
+      <a class="modal-btn gray" href="https://console.cloud.google.com/iam-admin/serviceaccounts?project=koudouengo" target="_blank">
+        🔑 Google Cloud Consoleを開く
+      </a>
+    </div>
+  </div>
+
+  <!-- GASエディタ -->
+  <div id="m-gas-editor" style="display:none">
+    <div class="modal-header red">
+      <span style="font-size:1.3rem">✏️</span>
+      <h3>GASエディタを開く</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>フォームのコードを確認・修正できます。</p>
+      <ol class="modal-steps">
+        <li>GASエディタを開く（下のボタン）</li>
+        <li>左側のファイル一覧でファイルを選択</li>
+        <li>「コード.gs」：バックエンドのロジック</li>
+        <li>「form」：フォームのHTML</li>
+        <li>修正後は ⌘S で保存</li>
+        <li>フォームに反映するには「再デプロイ」が必要</li>
+      </ol>
+      <a class="modal-btn red" href="https://script.google.com/home" target="_blank">
+        ✏️ GASエディタを開く
+      </a>
+    </div>
+  </div>
+
+</div><!-- /modal -->
+</div><!-- /overlay -->
+
+<script>
+// 現在時刻
+function updateTime(){
+  const now = new Date();
+  const d = now.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+  const t = now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('now').innerHTML = d + '<br>' + t;
+}
+updateTime();
+setInterval(updateTime, 30000);
+
+// モーダル開閉
+function openModal(id){
+  document.querySelectorAll('.modal > div').forEach(el => el.style.display='none');
+  const m = document.getElementById('m-' + id);
+  if(m){ m.style.display='block'; }
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closeModal(e){
+  if(e && e.target !== document.getElementById('overlay')) return;
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// フォームページへ遷移
+function showPage(page){
+  if(page === 'form'){
+    // GAS上では同じWebアプリの別URLに遷移
+    // ローカルテスト時はform.htmlを直接開く
+    window.location.href = 'form.html';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>振替登録｜行動援護従業者養成研修</title>
+<style>
+/* ── リセット & 基本 ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
+     background:#f0f4f8;color:#333;min-height:100vh}
+
+/* ── ヘッダー ── */
+.header{background:linear-gradient(135deg,#1a5276 0%,#2980b9 100%);
+        color:#fff;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.header h1{font-size:1.05rem;font-weight:700;letter-spacing:.03em}
+.header p{font-size:.75rem;opacity:.85;margin-top:4px}
+
+/* ── コンテナ ── */
+.container{max-width:820px;margin:0 auto;padding:20px 16px 40px}
+
+/* ── トースト通知 ── */
+#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);
+       z-index:9999;border-radius:8px;padding:12px 20px;font-size:.88rem;
+       font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);
+       transition:transform .35s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;
+       max-width:90vw;text-align:center;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.ok{background:#1e8449;color:#fff}
+#toast.err{background:#c0392b;color:#fff}
+
+/* ── カード ── */
+.card{background:#fff;border-radius:10px;padding:22px 20px;
+      box-shadow:0 2px 10px rgba(0,0,0,.08);margin-bottom:20px}
+.card-title{font-size:.93rem;font-weight:700;color:#1a5276;
+            border-left:4px solid #1a5276;padding-left:10px;margin-bottom:16px;
+            display:flex;align-items:center;gap:8px}
+.card-title .icon{font-size:1.1rem}
+.card-desc{font-size:.78rem;color:#666;margin:-10px 0 14px 14px;line-height:1.6}
+
+/* ── ステップウィザード ── */
+.steps{display:flex;align-items:flex-start;gap:0;margin-bottom:24px;
+       overflow-x:auto;padding-bottom:4px}
+.step-item{display:flex;flex-direction:column;align-items:center;flex:1;min-width:80px}
+.step-circle{width:32px;height:32px;border-radius:50%;border:2px solid #bbb;
+             background:#fff;color:#bbb;font-size:.8rem;font-weight:700;
+             display:flex;align-items:center;justify-content:center;
+             transition:all .25s;position:relative;z-index:1}
+.step-item.active .step-circle{border-color:#1a5276;background:#1a5276;color:#fff}
+.step-item.done .step-circle{border-color:#27ae60;background:#27ae60;color:#fff}
+.step-label{font-size:.68rem;color:#aaa;margin-top:5px;text-align:center;
+            line-height:1.3;font-weight:600}
+.step-item.active .step-label{color:#1a5276}
+.step-item.done .step-label{color:#27ae60}
+.step-line{height:2px;background:#ddd;flex:1;margin-top:15px;align-self:flex-start;
+           transition:background .25s}
+.step-line.done{background:#27ae60}
+
+/* ── フォームフィールド ── */
+.field{margin-bottom:16px}
+.field label{font-size:.78rem;font-weight:600;color:#555;display:block;margin-bottom:5px}
+.req{color:#e74c3c;margin-left:2px}
+.hint{font-size:.73rem;color:#888;margin-top:4px;min-height:1.1em;line-height:1.4}
+.hint.ok{color:#27ae60}
+.hint.warn{color:#e67e22}
+
+select,input[type=text]{width:100%;padding:10px 12px;border:1.5px solid #ccc;
+  border-radius:7px;font-size:.92rem;font-family:inherit;background:#fff;
+  transition:border-color .2s,box-shadow .2s;appearance:none;-webkit-appearance:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+       background-repeat:no-repeat;background-position:right 12px center;
+       padding-right:32px}
+select:focus,input:focus{outline:none;border-color:#1a5276;
+  box-shadow:0 0 0 3px rgba(26,82,118,.12)}
+select:disabled{background:#f5f5f5;color:#aaa;cursor:not-allowed}
+
+/* ── 受講者詳細カード ── */
+.stu-card{background:#eaf4ff;border:1px solid #aed4f7;border-radius:8px;
+          padding:12px 14px;font-size:.85rem;line-height:1.8;display:none;
+          margin-top:10px}
+.stu-card.show{display:block}
+.stu-name{font-size:1rem;font-weight:700;color:#1a5276}
+.stu-meta{color:#555}
+
+/* ── 確認ダイアログ ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+         z-index:1000;align-items:center;justify-content:center;padding:16px}
+.overlay.show{display:flex}
+.dialog{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:480px;
+        box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.dialog h3{font-size:1rem;color:#1a5276;margin-bottom:16px;
+           display:flex;align-items:center;gap:8px}
+.confirm-table{width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:18px}
+.confirm-table th{width:38%;padding:7px 10px;background:#f0f4f8;
+                  font-weight:600;color:#555;border:1px solid #e0e4ea;text-align:left}
+.confirm-table td{padding:7px 10px;border:1px solid #e0e4ea;color:#333}
+.dialog-btns{display:flex;gap:10px;justify-content:flex-end}
+
+/* ── ボタン ── */
+.btn{padding:11px 24px;border:none;border-radius:7px;font-size:.92rem;
+     font-family:inherit;cursor:pointer;font-weight:600;transition:all .2s;
+     display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:#1a5276;color:#fff}
+.btn-primary:hover:not(:disabled){background:#154360;transform:translateY(-1px)}
+.btn-primary:disabled{background:#aaa;cursor:not-allowed;transform:none}
+.btn-secondary{background:#f0f4f8;color:#555;border:1px solid #ccc}
+.btn-secondary:hover{background:#e0e8f0}
+.btn-sm{padding:5px 12px;font-size:.78rem;border-radius:5px}
+.btn-danger{background:#e74c3c;color:#fff}
+.btn-danger:hover{background:#c0392b}
+
+/* ── テーブル ── */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.82rem;min-width:580px}
+thead th{background:#1a5276;color:#fff;padding:9px 11px;text-align:left;
+         font-weight:600;white-space:nowrap}
+tbody td{padding:9px 11px;border-bottom:1px solid #eee;vertical-align:middle}
+tbody tr:hover td{background:#f5f8ff}
+.badge{display:inline-block;border-radius:4px;padding:2px 8px;
+       font-size:.72rem;font-weight:600;white-space:nowrap}
+.badge-abs{background:#fdebd0;color:#a04000}
+.badge-att{background:#d5f5e3;color:#1e8449}
+.loading{text-align:center;color:#888;padding:24px;font-size:.9rem}
+.empty{text-align:center;color:#aaa;padding:24px;font-size:.88rem}
+.filter-bar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.filter-bar input{flex:1;min-width:160px;max-width:300px;padding:7px 10px;
+                  font-size:.83rem}
+.count-badge{font-size:.75rem;background:#e8f4ff;color:#1a5276;
+             border-radius:12px;padding:2px 10px;font-weight:600}
+
+/* ── CSV取り込み ── */
+.upload-area{border:2px dashed #bbd;border-radius:8px;padding:20px;
+             text-align:center;cursor:pointer;transition:border-color .2s;
+             background:#fafbff}
+.upload-area:hover,.upload-area.drag{border-color:#1a5276;background:#f0f4ff}
+.upload-area input{display:none}
+.upload-label{font-size:.85rem;color:#666;cursor:pointer;display:block}
+.upload-label strong{color:#1a5276;text-decoration:underline}
+#video-filename{font-size:.82rem;color:#333;margin-top:6px;font-weight:600}
+#video-msg{margin-top:10px;font-size:.82rem;color:#555;line-height:1.5}
+
+/* ── レスポンシブ ── */
+@media(max-width:540px){
+  .header{padding:14px 14px}
+  .container{padding:14px 10px 32px}
+  .card{padding:16px 14px}
+  .steps{gap:0}
+  .step-circle{width:28px;height:28px;font-size:.72rem}
+  .dialog{padding:18px}
+}
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="header">
+  <h1>🔄 振替登録フォーム</h1>
+  <p>行動援護従業者養成研修　事務局用</p>
+</div>
+
+<div class="container">
+
+<!-- トースト -->
+<div id="toast"></div>
+
+<!-- ──────────────── 振替登録カード ──────────────── -->
+<div class="card">
+  <div class="card-title"><span class="icon">📝</span>新規振替を登録</div>
+  <div class="card-desc">欠席した受講者の振替出席を登録します。STEP 1→2→3 の順に選択してください。</div>
+
+  <!-- ステップ表示 -->
+  <div class="steps" id="steps-bar">
+    <div class="step-item active" id="step1-item">
+      <div class="step-circle" id="sc1">1</div>
+      <div class="step-label">欠席日<br>を選ぶ</div>
+    </div>
+    <div class="step-line" id="sl1"></div>
+    <div class="step-item" id="step2-item">
+      <div class="step-circle" id="sc2">2</div>
+      <div class="step-label">受講者<br>を選ぶ</div>
+    </div>
+    <div class="step-line" id="sl2"></div>
+    <div class="step-item" id="step3-item">
+      <div class="step-circle" id="sc3">3</div>
+      <div class="step-label">振替先<br>を選ぶ</div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="field">
+    <label for="absent_date">STEP 1　欠席した日付<span class="req">*</span></label>
+    <select id="absent_date" onchange="onAbsentDate(this.value)">
+      <option value="">── 読み込み中… ──</option>
+    </select>
+    <div class="hint" id="hint1">研修日程の一覧です。欠席した日を選んでください。</div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="field">
+    <label for="student_sel">STEP 2　受講者<span class="req">*</span></label>
+    <select id="student_sel" disabled onchange="onStudent(this.value)">
+      <option value="">── 先に STEP 1 で欠席日を選んでください ──</option>
+    </select>
+    <div class="hint" id="hint2">修了済み・振替登録済みの受講者は表示されません。</div>
+    <div class="stu-card" id="stu-detail"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="field">
+    <label for="transfer_date">STEP 3　振替先の日付<span class="req">*</span></label>
+    <select id="transfer_date" disabled>
+      <option value="">── 先に STEP 2 で受講者を選んでください ──</option>
+    </select>
+    <div class="hint" id="hint3">欠席した日程の代わりに出席する日付を選んでください。</div>
+  </div>
+
+  <!-- 備考 -->
+  <div class="field">
+    <label for="note">備考（欠席理由など）</label>
+    <input type="text" id="note" placeholder="例：体調不良のため（任意）">
+  </div>
+
+  <button class="btn btn-primary" id="submit-btn" onclick="confirmSubmit()" disabled>
+    <span>内容を確認して登録</span>
+  </button>
+</div>
+
+<!-- ──────────────── CSV取り込みカード ──────────────── -->
+<div class="card">
+  <div class="card-title"><span class="icon">🎬</span>動画視聴 CSV 取り込み</div>
+  <div class="card-desc">LMSからダウンロードした <strong>user-learning-lesson.csv</strong>（Shift-JIS）を取り込みます。<br>取り込んだデータはスプレッドシートの「動画視聴」シートに保存されます。</div>
+
+  <div class="upload-area" id="drop-zone"
+       ondragover="event.preventDefault();this.classList.add('drag')"
+       ondragleave="this.classList.remove('drag')"
+       ondrop="onDrop(event)">
+    <label class="upload-label" for="video-csv-input">
+      📂 ここにCSVをドラッグ＆ドロップ、または<strong>クリックして選択</strong>
+    </label>
+    <input type="file" id="video-csv-input" accept=".csv" onchange="onFileSelect(this)">
+    <div id="video-filename" style="display:none"></div>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button class="btn btn-primary btn-sm" id="video-import-btn" onclick="importVideoCSV()" disabled>
+      取り込む
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="clearCSV()">クリア</button>
+  </div>
+  <div id="video-msg"></div>
+</div>
+
+<!-- ──────────────── 振替一覧カード ──────────────── -->
+<div class="card">
+  <div class="card-title"><span class="icon">📋</span>登録済み振替一覧</div>
+
+  <div class="filter-bar">
+    <input type="text" id="filter-input" placeholder="🔍 受講者名・コース名で絞り込み…"
+           oninput="filterList()" style="border-radius:6px">
+    <span class="count-badge" id="list-count"></span>
+    <button class="btn btn-secondary btn-sm" onclick="loadTransferList()" title="最新の情報に更新">
+      🔄 更新
+    </button>
+  </div>
+
+  <div class="table-wrap">
+    <div id="list-area"><div class="loading">⏳ 読み込み中…</div></div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- ──────────────── 確認ダイアログ ──────────────── -->
+<div class="overlay" id="confirm-overlay">
+  <div class="dialog">
+    <h3>✅ 登録内容の確認</h3>
+    <table class="confirm-table" id="confirm-table"></table>
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeConfirm()">キャンセル</button>
+      <button class="btn btn-primary" id="confirm-ok-btn" onclick="doSubmit()">
+        登録する
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════
+// 状態管理
+// ══════════════════════════════
+let studentsCache = {};
+let selectedStudent = null;
+let allTransfers = [];
+let csvFileData = null;
+
+// ── 初期化 ──
+window.onload = function() {
+  google.script.run
+    .withSuccessHandler(initDates)
+    .withFailureHandler(err => toast('日付の読み込みに失敗しました: ' + err.message, false))
+    .getAllDates();
+  loadTransferList();
+};
+
+// ══════════════════════════════
+// ステップ進捗更新
+// ══════════════════════════════
+function updateSteps(active) {
+  // active: 1=STEP1, 2=STEP2, 3=STEP3
+  [1,2,3].forEach(i => {
+    const item = document.getElementById('step' + i + '-item');
+    const circ = document.getElementById('sc' + i);
+    item.classList.remove('active','done');
+    circ.textContent = i;
+    if (i < active) {
+      item.classList.add('done');
+      circ.textContent = '✓';
+    } else if (i === active) {
+      item.classList.add('active');
+    }
+    if (i < 3) {
+      const line = document.getElementById('sl' + i);
+      line.classList.toggle('done', i < active);
+    }
+  });
+}
+
+// ══════════════════════════════
+// 日付選択
+// ══════════════════════════════
+function initDates(allDates) {
+  const absEl = document.getElementById('absent_date');
+  const trnEl = document.getElementById('transfer_date');
+  const blank = '<option value="">── 日付を選択してください ──</option>';
+  absEl.innerHTML = blank;
+  trnEl.innerHTML = blank;
+  allDates.forEach(({date, course}) => {
+    const opt = `<option value="${date}">${date}（${course}）</option>`;
+    absEl.insertAdjacentHTML('beforeend', opt);
+    trnEl.insertAdjacentHTML('beforeend', opt);
+  });
+  setHint('hint1', allDates.length + '件の研修日程があります。', '');
+}
+
+function onAbsentDate(date) {
+  const sel  = document.getElementById('student_sel');
+  const trnEl = document.getElementById('transfer_date');
+  clearStudent();
+  sel.innerHTML = '<option value="">⏳ 受講者を読み込み中…</option>';
+  sel.disabled  = true;
+  trnEl.disabled = true;
+  trnEl.innerHTML = '<option value="">── 先に受講者を選んでください ──</option>';
+  updateSteps(date ? 2 : 1);
+
+  if (!date) {
+    sel.innerHTML = '<option value="">── 先に STEP 1 で欠席日を選んでください ──</option>';
+    return;
+  }
+
+  if (studentsCache[date]) {
+    populateStudents(date, studentsCache[date]);
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(students => {
+      studentsCache[date] = students;
+      populateStudents(date, students);
+    })
+    .withFailureHandler(err => {
+      sel.innerHTML = '<option value="">取得失敗</option>';
+      setHint('hint2', 'エラー: ' + err.message, 'warn');
+    })
+    .getStudentsForDate(date);
+}
+
+function populateStudents(date, students) {
+  const sel = document.getElementById('student_sel');
+  sel.innerHTML = '<option value="">── 受講者を選んでください ──</option>';
+  if (students.length === 0) {
+    sel.innerHTML = '<option value="">（振替対象の受講者はいません）</option>';
+    setHint('hint2', '全員振替済みまたは修了済みです。', 'ok');
+    return;
+  }
+  students.forEach((s, i) => {
+    sel.insertAdjacentHTML('beforeend',
+      `<option value="${i}">${s.furigana}　${s.name}</option>`);
+  });
+  sel.disabled = false;
+  setHint('hint2', `${students.length}人が振替登録できます。`, 'ok');
+}
+
+// ══════════════════════════════
+// 受講者選択
+// ══════════════════════════════
+function onStudent(idx) {
+  clearStudent();
+  const date = document.getElementById('absent_date').value;
+  if (!date || idx === '') { updateSteps(2); return; }
+  const s = studentsCache[date]?.[parseInt(idx)];
+  if (!s) return;
+
+  selectedStudent = s;
+
+  const detail = document.getElementById('stu-detail');
+  detail.innerHTML =
+    `<div class="stu-name">${s.name} <span style="font-size:.8rem;font-weight:400;color:#555">（${s.furigana}）</span></div>` +
+    `<div class="stu-meta">` +
+    (s.company ? `🏢 ${s.company}　` : '') +
+    `📍 ${s.address}　` +
+    `📚 ${s.course}` +
+    `</div>`;
+  detail.classList.add('show');
+
+  // STEP 3 を有効化
+  const trnEl = document.getElementById('transfer_date');
+  trnEl.disabled = false;
+  setHint('hint3', '振替出席する日程を選んでください。欠席した日以外を推奨します。', '');
+  updateSteps(3);
+  document.getElementById('submit-btn').disabled = false;
+}
+
+function clearStudent() {
+  selectedStudent = null;
+  const d = document.getElementById('stu-detail');
+  d.classList.remove('show');
+  d.innerHTML = '';
+  document.getElementById('submit-btn').disabled = true;
+}
+
+function setHint(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'hint' + (type ? ' ' + type : '');
+}
+
+// ══════════════════════════════
+// 確認 → 登録
+// ══════════════════════════════
+function confirmSubmit() {
+  const absentDate   = document.getElementById('absent_date').value;
+  const transferDate = document.getElementById('transfer_date').value;
+  if (!absentDate) { toast('欠席日を選択してください。', false); return; }
+  if (!selectedStudent) { toast('受講者を選択してください。', false); return; }
+  if (!transferDate) { toast('振替先の日付を選択してください。', false); return; }
+
+  const trnSel  = document.getElementById('transfer_date');
+  const toCourse = trnSel.selectedOptions[0].textContent
+                    .replace(/^\d+\/\d+（/, '').replace(/）$/, '');
+  const note = document.getElementById('note').value.trim();
+
+  const rows = [
+    ['受講者',     selectedStudent.name + '（' + selectedStudent.furigana + '）'],
+    ['事業所',     selectedStudent.company || '（個人）'],
+    ['元コース',   selectedStudent.course],
+    ['欠席日',     absentDate],
+    ['振替先コース', toCourse],
+    ['振替先日付',  transferDate],
+    ['備考',       note || '（なし）'],
+  ];
+
+  let tbody = '';
+  rows.forEach(([th, td]) => {
+    tbody += `<tr><th>${th}</th><td>${td}</td></tr>`;
+  });
+  document.getElementById('confirm-table').innerHTML = tbody;
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+}
+
+function doSubmit() {
+  const absentDate   = document.getElementById('absent_date').value;
+  const transferDate = document.getElementById('transfer_date').value;
+  const trnSel       = document.getElementById('transfer_date');
+  const toCourse     = trnSel.selectedOptions[0].textContent
+                        .replace(/^\d+\/\d+（/, '').replace(/）$/, '');
+  const note = document.getElementById('note').value.trim();
+
+  const data = {
+    surname:      selectedStudent.name.split(' ')[0] || '',
+    given:        selectedStudent.name.split(' ').slice(1).join(' ') || '',
+    furigana:     selectedStudent.furigana,
+    company:      selectedStudent.company,
+    address:      selectedStudent.address,
+    fromCourse:   selectedStudent.course,
+    absentDate:   absentDate,
+    toCourse:     toCourse,
+    transferDate: transferDate,
+    note:         note
+  };
+
+  const btn = document.getElementById('confirm-ok-btn');
+  btn.disabled = true;
+  btn.textContent = '登録中…';
+
+  google.script.run
+    .withSuccessHandler(() => {
+      closeConfirm();
+      toast(`✅ ${selectedStudent.name} さんの振替を登録しました（${absentDate} → ${transferDate}）`, true);
+      // フォームリセット
+      document.getElementById('absent_date').value = '';
+      document.getElementById('transfer_date').value = '';
+      document.getElementById('transfer_date').disabled = true;
+      document.getElementById('transfer_date').innerHTML =
+        '<option value="">── 先に受講者を選んでください ──</option>';
+      document.getElementById('note').value = '';
+      document.getElementById('student_sel').innerHTML =
+        '<option value="">── 先に STEP 1 で欠席日を選んでください ──</option>';
+      document.getElementById('student_sel').disabled = true;
+      clearStudent();
+      btn.disabled = false;
+      btn.textContent = '登録する';
+      setHint('hint2', '修了済み・振替登録済みの受講者は表示されません。', '');
+      setHint('hint3', '欠席した日程の代わりに出席する日付を選んでください。', '');
+      updateSteps(1);
+      loadTransferList();
+    })
+    .withFailureHandler(err => {
+      closeConfirm();
+      toast('登録に失敗しました: ' + err.message, false);
+      btn.disabled = false;
+      btn.textContent = '登録する';
+    })
+    .registerTransfer(data);
+}
+
+// ══════════════════════════════
+// 一覧表示
+// ══════════════════════════════
+function loadTransferList() {
+  const area = document.getElementById('list-area');
+  area.innerHTML = '<div class="loading">⏳ 読み込み中…</div>';
+  google.script.run
+    .withSuccessHandler(data => {
+      allTransfers = data;
+      renderList(data);
+    })
+    .withFailureHandler(() => {
+      area.innerHTML = '<div class="loading">⚠️ 取得に失敗しました</div>';
+    })
+    .getTransfers();
+}
+
+function filterList() {
+  const q = document.getElementById('filter-input').value.trim().toLowerCase();
+  if (!q) { renderList(allTransfers); return; }
+  const filtered = allTransfers.filter(t => {
+    const text = [t.surname, t.given, t.furigana, t.fromCourse, t.toCourse, t.company].join(' ').toLowerCase();
+    return text.includes(q);
+  });
+  renderList(filtered);
+}
+
+function renderList(transfers) {
+  const area = document.getElementById('list-area');
+  const cnt  = document.getElementById('list-count');
+  cnt.textContent = transfers.length + '件';
+
+  const head = `<table>
+    <thead><tr>
+      <th>登録日時</th><th>受講者</th><th>事業所</th>
+      <th>元コース / 欠席日</th><th>振替先コース / 出席日</th><th>備考</th><th></th>
+    </tr></thead><tbody>`;
+
+  if (!transfers.length) {
+    area.innerHTML = head + `<tr><td colspan="7" class="empty">📭 振替登録はありません</td></tr></tbody></table>`;
+    return;
+  }
+
+  let rows = '';
+  transfers.forEach(t => {
+    rows += `<tr>
+      <td style="white-space:nowrap;font-size:.78rem">${t.datetime}</td>
+      <td><strong>${t.surname} ${t.given}</strong><br><small style="color:#777">${t.furigana}</small></td>
+      <td style="font-size:.78rem">${t.company || '─'}</td>
+      <td>${t.fromCourse}<br><span class="badge badge-abs">欠席 ${t.absentDate}</span></td>
+      <td><strong>${t.toCourse}</strong><br><span class="badge badge-att">出席 ${t.transferDate}</span></td>
+      <td style="font-size:.78rem;color:#666">${t.note || '─'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteRow(${t.rowIndex})">削除</button></td>
+    </tr>`;
+  });
+  area.innerHTML = head + rows + '</tbody></table>';
+}
+
+function deleteRow(rowIndex) {
+  if (!confirm('この振替記録を削除しますか？\n（この操作は元に戻せません）')) return;
+  google.script.run
+    .withSuccessHandler(() => {
+      toast('削除しました。', true);
+      loadTransferList();
+    })
+    .withFailureHandler(err => toast('削除失敗: ' + err.message, false))
+    .deleteTransfer(rowIndex);
+}
+
+// ══════════════════════════════
+// CSV取り込み
+// ══════════════════════════════
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) processCSVFile(file);
+}
+
+function onFileSelect(input) {
+  if (input.files[0]) processCSVFile(input.files[0]);
+}
+
+function processCSVFile(file) {
+  const label = document.getElementById('video-filename');
+  label.textContent = '📄 ' + file.name;
+  label.style.display = 'block';
+  setVideoMsg('ファイルを読み込み中…', '#888');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const decoder = new TextDecoder('shift-jis');
+      csvFileData = decoder.decode(new Uint8Array(e.target.result));
+      const lines = csvFileData.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+      const progIdx = headers.findIndex(h => h.includes('進捗'));
+      const completed = lines.slice(1).filter(line => {
+        const cols = line.split(',');
+        return progIdx >= 0 && (cols[progIdx]||'').replace(/"/g,'').trim() === '100';
+      }).length;
+      setVideoMsg(
+        `✅ 読み込み完了: 合計 ${lines.length - 1}件 / 進捗100% ${completed}件\n「取り込む」ボタンを押してスプレッドシートに保存してください。`,
+        '#1e8449');
+      document.getElementById('video-import-btn').disabled = false;
+    } catch(err) {
+      setVideoMsg('❌ 文字コードの変換に失敗しました: ' + err.message, '#c0392b');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearCSV() {
+  csvFileData = null;
+  document.getElementById('video-csv-input').value = '';
+  document.getElementById('video-filename').style.display = 'none';
+  document.getElementById('video-filename').textContent = '';
+  document.getElementById('video-import-btn').disabled = true;
+  setVideoMsg('', '#555');
+}
+
+function importVideoCSV() {
+  if (!csvFileData) { setVideoMsg('CSVファイルを選択してください', '#c0392b'); return; }
+  const btn = document.getElementById('video-import-btn');
+  btn.disabled = true;
+  setVideoMsg('⏳ スプレッドシートに書き込み中…', '#888');
+
+  google.script.run
+    .withSuccessHandler(result => {
+      setVideoMsg(`✅ 完了: ${result.rows}件をスプレッドシートに書き込みました。`, '#1e8449');
+      clearCSV();
+    })
+    .withFailureHandler(err => {
+      setVideoMsg('❌ エラー: ' + err.message, '#c0392b');
+      btn.disabled = false;
+    })
+    .importVideoCSV(csvFileData);
+}
+
+function setVideoMsg(text, color) {
+  const el = document.getElementById('video-msg');
+  el.textContent = text;
+  el.style.color = color;
+}
+
+// ══════════════════════════════
+// トースト通知
+// ══════════════════════════════
+let toastTimer;
+function toast(text, ok) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.className = 'show ' + (ok ? 'ok' : 'err');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ok ? 'ok' : 'err'; }, 5000);
+}
+
+// オーバーレイ外クリックで閉じる
+document.getElementById('confirm-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirm();
+});
+</script>
+</body>
+</html>
