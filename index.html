@@ -155,6 +155,50 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
            padding:9px 12px;font-size:.82rem;color:#1a5276;margin-top:10px;
            line-height:1.6}
 
+/* ── ログインバッジ（ヘッダー） ── */
+.login-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;
+  border-radius:8px;border:none;cursor:pointer;font-size:.8rem;font-weight:600;
+  transition:all .15s;white-space:nowrap}
+.login-btn.loggedin{background:rgba(39,174,96,.25);color:#fff}
+.login-btn.loggedin:hover{background:rgba(39,174,96,.4)}
+.login-btn.notlogin{background:rgba(231,76,60,.3);color:#fff;animation:pulse-red 2s infinite}
+.login-btn.notlogin:hover{background:rgba(231,76,60,.5)}
+@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.65}}
+.login-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-loggedin{background:#2ecc71}
+.dot-notlogin{background:#e74c3c}
+
+/* ── トークン管理モーダル ── */
+.token-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:300;align-items:center;justify-content:center;padding:16px}
+.token-modal-overlay.show{display:flex}
+.token-modal{background:#fff;border-radius:12px;width:100%;max-width:440px;
+  box-shadow:0 8px 32px rgba(0,0,0,.3);overflow:hidden}
+.token-modal-hd{background:linear-gradient(135deg,#1a5276,#2980b9);
+  color:#fff;padding:15px 20px;display:flex;align-items:center;gap:10px}
+.token-modal-hd h3{flex:1;font-size:1rem;margin:0}
+.token-modal-body{padding:20px}
+.token-status-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-radius:8px;margin-bottom:16px;font-size:.88rem;font-weight:600}
+.token-status-bar.ok{background:#d5f5e3;color:#1e8449;border:1px solid #82e0aa}
+.token-status-bar.ng{background:#fde8e8;color:#c0392b;border:1px solid #f5a6a6}
+.share-link-box{background:#f8f9fa;border:1.5px dashed #aaa;border-radius:8px;
+  padding:12px 14px;margin-bottom:16px}
+.share-link-box p{font-size:.82rem;color:#555;margin-bottom:8px;line-height:1.5}
+.share-link-copy-btn{width:100%;padding:9px;background:#2980b9;color:#fff;border:none;
+  border-radius:7px;font-size:.88rem;font-weight:600;cursor:pointer;transition:background .15s}
+.share-link-copy-btn:hover{background:#1a5276}
+.token-inp-row{display:flex;gap:8px;margin-bottom:8px}
+.token-inp-row input{flex:1;padding:9px 12px;border:1.5px solid #ccc;border-radius:7px;
+  font-size:.83rem;font-family:monospace;background:#fff}
+.token-inp-row input:focus{outline:none;border-color:#2980b9}
+.token-inp-row button{padding:9px 14px;background:#1a5276;color:#fff;border:none;
+  border-radius:7px;font-size:.83rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.token-inp-row button:hover{background:#154360}
+.token-logout-btn{width:100%;padding:8px;background:#eee;color:#555;border:none;
+  border-radius:7px;font-size:.83rem;cursor:pointer;margin-top:8px}
+.token-logout-btn:hover{background:#ddd;color:#c0392b}
+
 /* ── レスポンシブ ── */
 @media(max-width:700px){
   .main{grid-template-columns:1fr}
@@ -344,7 +388,11 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
     <div class="header-title">🏫 行動援護従業者養成研修　事務局ダッシュボード</div>
     <div class="header-sub">操作したい項目をクリックしてください</div>
   </div>
-  <div style="display:flex;align-items:center;gap:12px">
+  <div style="display:flex;align-items:center;gap:10px">
+    <button id="login-btn" class="login-btn notlogin" onclick="openTokenModal()" title="GitHubログイン設定">
+      <span class="login-dot dot-notlogin" id="login-dot"></span>
+      <span id="login-label">未ログイン</span>
+    </button>
     <button class="bell-btn" onclick="showReminderPopup()" title="今週のチェックリスト">
       🔔<span class="bell-badge" id="bell-badge">0</span>
     </button>
@@ -1037,6 +1085,52 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 </div><!-- /modal -->
 </div><!-- /overlay -->
 
+<!-- トークン管理モーダル -->
+<div class="token-modal-overlay" id="token-modal-overlay" onclick="closeTokenModal(event)">
+  <div class="token-modal" onclick="event.stopPropagation()">
+    <div class="token-modal-hd">
+      <span style="font-size:1.3rem">🔑</span>
+      <h3>GitHubログイン設定</h3>
+      <button style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer"
+              onclick="closeTokenModal()">✕</button>
+    </div>
+    <div class="token-modal-body">
+
+      <!-- ログイン状態 -->
+      <div id="token-status-bar" class="token-status-bar ng">
+        <span id="token-status-dot" style="font-size:1rem">🔴</span>
+        <span id="token-status-text">ログインしていません</span>
+      </div>
+
+      <!-- ログイン済み時：共有リンク -->
+      <div id="share-link-box" class="share-link-box" style="display:none">
+        <p>📤 <strong>他のPCで使う場合</strong>は、下のボタンでリンクをコピーして、スタッフに共有してください。<br>
+        そのリンクを開くだけで自動的にログインされます。</p>
+        <button class="share-link-copy-btn" onclick="copyShareLink()">
+          🔗 このPCのログイン用リンクをコピー
+        </button>
+      </div>
+
+      <!-- トークン入力 -->
+      <div style="font-size:.82rem;font-weight:600;color:#555;margin-bottom:6px"
+           id="token-inp-label">GitHubアクセストークンを入力：</div>
+      <div class="token-inp-row">
+        <input type="password" id="token-modal-inp" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        <button onclick="applyTokenFromModal()">保存</button>
+      </div>
+      <small style="font-size:.72rem;color:#aaa;line-height:1.6">
+        ※ <a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=ダッシュボード用"
+          target="_blank" style="color:#1a5276">トークンを新規作成</a>（repo + workflow スコープ）<br>
+        ※ 入力値はこのブラウザにのみ保存されます。
+      </small>
+
+      <!-- ログアウト -->
+      <button class="token-logout-btn" id="token-logout-btn" style="display:none"
+              onclick="logoutToken()">🚪 ログアウト（トークンを削除）</button>
+    </div>
+  </div>
+</div>
+
 <!-- 申込者一覧モーダル -->
 <div class="remind-overlay" id="applicants-overlay" onclick="closeApplicants(event)">
   <div class="applicants-modal" onclick="event.stopPropagation()">
@@ -1180,10 +1274,118 @@ function toggleCheck(id){
   if(cb) cb.checked = !cb.checked;
 }
 
+// ══════════════════════════════════════════
+//  🔑 トークン管理 ＆ 自動ログイン
+// ══════════════════════════════════════════
+
+// 起動時：URLハッシュにトークンがあれば自動保存してURLをきれいにする
+(function initTokenFromHash(){
+  const hash = window.location.hash.slice(1);
+  if(hash && (hash.startsWith('ghp_') || hash.startsWith('github_pat_') || hash.length > 20)){
+    localStorage.setItem('gh_token', hash);
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+})();
+
+function updateLoginStatus(){
+  const token = localStorage.getItem('gh_token') || '';
+  const btn   = document.getElementById('login-btn');
+  const dot   = document.getElementById('login-dot');
+  const label = document.getElementById('login-label');
+  if(!btn) return;
+  if(token){
+    btn.className   = 'login-btn loggedin';
+    dot.className   = 'login-dot dot-loggedin';
+    label.textContent = 'ログイン中';
+  } else {
+    btn.className   = 'login-btn notlogin';
+    dot.className   = 'login-dot dot-notlogin';
+    label.textContent = '未ログイン';
+  }
+}
+
+function openTokenModal(){
+  const token = localStorage.getItem('gh_token') || '';
+  // 状態バー
+  const bar  = document.getElementById('token-status-bar');
+  const dot  = document.getElementById('token-status-dot');
+  const text = document.getElementById('token-status-text');
+  const shareBox = document.getElementById('share-link-box');
+  const logoutBtn = document.getElementById('token-logout-btn');
+  const inp  = document.getElementById('token-modal-inp');
+  const inpLabel = document.getElementById('token-inp-label');
+  if(token){
+    bar.className  = 'token-status-bar ok';
+    dot.textContent = '🟢';
+    text.textContent = 'ログイン中 — データを取得できます';
+    shareBox.style.display = 'block';
+    logoutBtn.style.display = 'block';
+    inpLabel.textContent = 'トークンを変更する場合：';
+    inp.placeholder = '新しいトークンを入力…';
+  } else {
+    bar.className  = 'token-status-bar ng';
+    dot.textContent = '🔴';
+    text.textContent = 'ログインしていません — トークンを入力してください';
+    shareBox.style.display = 'none';
+    logoutBtn.style.display = 'none';
+    inpLabel.textContent = 'GitHubアクセストークンを入力：';
+    inp.placeholder = 'ghp_xxxxxxxxxxxxxxxxxxxx';
+  }
+  inp.value = '';
+  document.getElementById('token-modal-overlay').classList.add('show');
+}
+
+function closeTokenModal(e){
+  if(e && e.target !== document.getElementById('token-modal-overlay')) return;
+  document.getElementById('token-modal-overlay').classList.remove('show');
+}
+
+function applyTokenFromModal(){
+  const val = document.getElementById('token-modal-inp').value.trim();
+  if(!val){ alert('トークンを入力してください'); return; }
+  localStorage.setItem('gh_token', val);
+  updateLoginStatus();
+  // 既存のモーダル内のトークン入力欄も同期
+  const el = document.getElementById('gh-token');
+  if(el) el.value = val;
+  // データを再読込
+  loadSendTeachersModal();
+  applicantsData = null;
+  incompleteData = null;
+  loadProgressPanel();
+  closeTokenModal();
+  // 少し待ってからステータス確認
+  setTimeout(() => {}, 300);
+}
+
+function logoutToken(){
+  if(!confirm('ログアウトしますか？\nトークンがこのブラウザから削除されます。')) return;
+  localStorage.removeItem('gh_token');
+  const el = document.getElementById('gh-token');
+  if(el) el.value = '';
+  applicantsData = null;
+  incompleteData = null;
+  updateLoginStatus();
+  closeTokenModal();
+}
+
+function copyShareLink(){
+  const token = localStorage.getItem('gh_token') || '';
+  if(!token){ alert('ログインしてからコピーしてください'); return; }
+  const url = window.location.origin + window.location.pathname + '#' + token;
+  navigator.clipboard.writeText(url).then(() => {
+    alert('✅ 共有リンクをコピーしました！\n\n他のPCでこのリンクを開くと自動的にログインされます。\n\nLINEやメールでスタッフに送ってください。');
+  }).catch(() => {
+    // クリップボードAPIが使えない場合はプロンプトで表示
+    prompt('下のリンクをコピーして共有してください：', url);
+  });
+}
+
 function saveToken(val){
   if(val){
     localStorage.setItem('gh_token', val);
-    loadSendTeachersModal(); // トークン入力時に自動リロード
+    updateLoginStatus();
+    loadSendTeachersModal();
   }
 }
 
@@ -1580,6 +1782,7 @@ function showProgressTab(tab){
 }
 
 // ── 起動処理 ──
+updateLoginStatus();
 checkAutoPopup();
 loadProgressPanel();
 
