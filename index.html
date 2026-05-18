@@ -846,7 +846,8 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 // ══ 先生送信 ══
 const GH_REPO  = 'bestwaycare/koudouengo-attendance';
 const GH_WF    = 'send-teachers.yml';
-const RAW_BASE = 'https://raw.githubusercontent.com/bestwaycare/koudouengo-attendance/main';
+// Private リポジトリのため GitHub API（認証あり）で取得
+const GH_API   = 'https://api.github.com/repos/' + GH_REPO + '/contents';
 
 function toggleCheck(id){
   const cb = document.getElementById(id);
@@ -854,7 +855,10 @@ function toggleCheck(id){
 }
 
 function saveToken(val){
-  if(val) localStorage.setItem('gh_token', val);
+  if(val){
+    localStorage.setItem('gh_token', val);
+    loadSendTeachersModal(); // トークン入力時に自動リロード
+  }
 }
 
 function loadToken(){
@@ -863,50 +867,66 @@ function loadToken(){
   if(el && t) el.value = t;
 }
 
-async function loadSendTeachersModal(){
-  // ── 先生リスト（teachers.json から動的生成）──
-  try {
-    const teachers = await fetch(RAW_BASE + '/teachers.json?_=' + Date.now()).then(r => r.json());
-    const list = document.getElementById('teacher-checklist');
-    if(list){
-      list.innerHTML = teachers.map((t, i) => `
-        <div class="teacher-check" onclick="toggleCheck('chk-${i}')">
-          <input type="checkbox" id="chk-${i}" value="${t.email}">
-          <div>
-            <div class="tc-name">${t.name}</div>
-            <div class="tc-email">${t.email}</div>
-          </div>
-        </div>
-      `).join('');
+// GitHub API（認証あり）でプライベートリポジトリのJSONを取得
+async function fetchPrivateJson(filename){
+  const token = localStorage.getItem('gh_token') || '';
+  if(!token) return null;
+  const res = await fetch(GH_API + '/' + filename, {
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Accept': 'application/vnd.github.v3.raw'
     }
-  } catch(e) {
-    const list = document.getElementById('teacher-checklist');
-    if(list) list.innerHTML = '<div style="color:#c0392b;font-size:.82rem">先生リストの取得に失敗しました</div>';
-  }
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.json();
+}
 
-  // ── コース一覧（courses.json から動的生成）──
-  try {
-    const courses = await fetch(RAW_BASE + '/courses.json?_=' + Date.now()).then(r => r.json());
-    const sel = document.getElementById('teacher-course-sel');
-    if(sel){
-      if(courses.length === 0){
-        sel.innerHTML = '<option value="">── コースがありません（更新ワークフローを実行してください）──</option>';
-      } else {
-        sel.innerHTML = '<option value="">── コースを選択 ──</option>' +
-          courses.map(c => `<option value="${c}">${c}</option>`).join('');
+async function loadSendTeachersModal(){
+  const token = localStorage.getItem('gh_token') || '';
+  const noToken = '<div style="color:#999;font-size:.82rem;padding:6px 0">🔑 上のトークンを入力すると表示されます</div>';
+
+  // ── 先生リスト ──
+  const list = document.getElementById('teacher-checklist');
+  if(list){
+    if(!token){
+      list.innerHTML = noToken;
+    } else {
+      list.innerHTML = '<div style="color:#999;font-size:.82rem">読み込み中…</div>';
+      try {
+        const teachers = await fetchPrivateJson('teachers.json');
+        list.innerHTML = teachers.map((t, i) => `
+          <div class="teacher-check" onclick="toggleCheck('chk-${i}')">
+            <input type="checkbox" id="chk-${i}" value="${t.email}">
+            <div>
+              <div class="tc-name">${t.name}</div>
+              <div class="tc-email">${t.email}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch(e) {
+        list.innerHTML = '<div style="color:#c0392b;font-size:.82rem">❌ 先生リストの取得に失敗 (' + e.message + ')</div>';
       }
     }
-  } catch(e) {
-    const sel = document.getElementById('teacher-course-sel');
-    if(sel) sel.innerHTML = '<option value="">── 取得失敗（直接入力してください）──</option>';
-    // 取得失敗時はテキスト入力に切り替え
-    const sel2 = document.getElementById('teacher-course-sel');
-    if(sel2){
-      const inp = document.createElement('input');
-      inp.type = 'text'; inp.id = 'teacher-course-sel';
-      inp.className = 'course-select';
-      inp.placeholder = '例: 5月20日27日(水)';
-      sel2.replaceWith(inp);
+  }
+
+  // ── コース一覧 ──
+  const sel = document.getElementById('teacher-course-sel');
+  if(sel){
+    if(!token){
+      sel.innerHTML = '<option value="">── トークンを入力してください ──</option>';
+    } else {
+      sel.innerHTML = '<option value="">── 読み込み中… ──</option>';
+      try {
+        const courses = await fetchPrivateJson('courses.json');
+        if(!courses || courses.length === 0){
+          sel.innerHTML = '<option value="">── コースなし（refresh-courses を実行してください）──</option>';
+        } else {
+          sel.innerHTML = '<option value="">── コースを選択 ──</option>' +
+            courses.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+      } catch(e) {
+        sel.innerHTML = '<option value="">── 取得失敗 (' + e.message + ') ──</option>';
+      }
     }
   }
 }
