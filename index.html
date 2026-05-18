@@ -160,6 +160,87 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
   .main{grid-template-columns:1fr}
   .status-bar{margin:0 10px 14px;gap:10px}
 }
+
+/* ── ベルボタン ── */
+.bell-btn{position:relative;background:rgba(255,255,255,.18);border:none;
+  color:#fff;font-size:1.25rem;padding:7px 10px;border-radius:8px;
+  cursor:pointer;transition:background .15s;line-height:1}
+.bell-btn:hover{background:rgba(255,255,255,.32)}
+.bell-badge{position:absolute;top:-5px;right:-5px;background:#e74c3c;
+  color:#fff;font-size:.6rem;font-weight:700;border-radius:50%;
+  width:17px;height:17px;display:none;align-items:center;justify-content:center}
+.bell-badge.show{display:flex}
+
+/* ── リマインダーポップアップ ── */
+.remind-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+  z-index:200;align-items:center;justify-content:center;padding:16px}
+.remind-overlay.show{display:flex}
+.remind-popup{background:#fff;border-radius:12px;width:100%;max-width:440px;
+  box-shadow:0 8px 32px rgba(0,0,0,.25);overflow:hidden}
+.remind-popup-hd{background:linear-gradient(135deg,#1a5276,#2980b9);
+  color:#fff;padding:15px 20px;display:flex;align-items:center;gap:10px}
+.remind-popup-hd h3{font-size:1rem;flex:1;margin:0}
+.remind-popup-body{padding:18px 20px}
+.remind-popup-week{font-size:.75rem;color:#999;margin-bottom:10px}
+.rpitem{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid #f0f0f0;cursor:pointer}
+.rpitem:last-of-type{border-bottom:none}
+.rpitem input[type=checkbox]{width:18px;height:18px;accent-color:#27ae60;cursor:pointer;flex-shrink:0}
+.rpitem label{font-size:.88rem;cursor:pointer;flex:1;line-height:1.45}
+.rpitem.done label{text-decoration:line-through;color:#bbb}
+.remind-actions{display:flex;gap:8px;margin-top:14px}
+.remind-actions button{flex:1;padding:10px;border-radius:7px;font-size:.88rem;
+  font-weight:600;cursor:pointer;border:none}
+.btn-later{background:#eee;color:#555}.btn-later:hover{background:#ddd}
+.btn-close-remind{background:#27ae60;color:#fff}.btn-close-remind:hover{background:#1e8449}
+
+/* ── 進捗・リマインダーパネル ── */
+.progress-section{max-width:1100px;margin:0 auto 28px;padding:0 20px}
+.progress-section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.progress-section-hd h2{font-size:.95rem;font-weight:700;color:#333}
+.ptabs{display:flex;gap:8px}
+.ptab{padding:7px 18px;border-radius:6px;font-size:.82rem;font-weight:600;
+  cursor:pointer;border:2px solid #ddd;background:#fff;color:#555;transition:all .15s}
+.ptab.active{background:#1a5276;color:#fff;border-color:#1a5276}
+.ptab:hover:not(.active){background:#eaf4ff;border-color:#1a5276;color:#1a5276}
+.ptab-content{background:#fff;border-radius:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08);padding:18px}
+
+/* リマインダーパネル内 */
+.rp-week-label{font-size:.75rem;color:#999;margin-bottom:12px}
+.rp-item{display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid #f0f0f0;cursor:pointer}
+.rp-item:last-of-type{border-bottom:none}
+.rp-item input[type=checkbox]{width:18px;height:18px;accent-color:#27ae60;cursor:pointer;flex-shrink:0}
+.rp-item label{font-size:.88rem;cursor:pointer;flex:1;line-height:1.45}
+.rp-item.done label{text-decoration:line-through;color:#bbb}
+.rp-reset-note{font-size:.72rem;color:#bbb;text-align:right;margin-top:10px}
+
+/* 進捗テーブル */
+.prog-wrap{overflow-x:auto}
+.prog-table{width:100%;border-collapse:collapse;font-size:.83rem}
+.prog-table th{background:#1a5276;color:#fff;padding:9px 10px;text-align:center;
+  font-weight:600;font-size:.78rem;white-space:nowrap}
+.prog-table th:first-child{text-align:left;min-width:150px}
+.prog-table td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:middle}
+.prog-table tr:last-child td{border-bottom:none}
+.prog-table tr:hover td{background:#f5f9ff}
+.prog-chk{width:26px;height:26px;border-radius:5px;border:2px solid #ddd;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:13px;margin:0 auto;transition:all .15s;user-select:none;font-weight:700}
+.prog-chk.on{background:#27ae60;border-color:#27ae60;color:#fff}
+.prog-chk:hover:not(.on){background:#eaf4ff;border-color:#2980b9}
+.prog-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:1rem;
+  transition:color .15s;padding:2px 6px}
+.prog-del:hover{color:#c0392b}
+.prog-add-row{display:flex;gap:8px;margin-top:14px}
+.prog-add-row input{flex:1;padding:8px 12px;border:1.5px solid #ddd;border-radius:6px;
+  font-size:.85rem;font-family:inherit}
+.prog-add-row input:focus{outline:none;border-color:#1a5276}
+.prog-add-row button{padding:8px 16px;background:#1a5276;color:#fff;border:none;
+  border-radius:6px;font-size:.83rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.prog-add-row button:hover{background:#154360}
+.prog-empty{text-align:center;padding:24px;color:#aaa;font-size:.85rem}
 </style>
 </head>
 <body>
@@ -170,7 +251,12 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
     <div class="header-title">🏫 行動援護従業者養成研修　事務局ダッシュボード</div>
     <div class="header-sub">操作したい項目をクリックしてください</div>
   </div>
-  <div class="header-date" id="now"></div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="bell-btn" onclick="showReminderPopup()" title="今週のチェックリスト">
+      🔔<span class="bell-badge" id="bell-badge">0</span>
+    </button>
+    <div class="header-date" id="now"></div>
+  </div>
 </div>
 
 <!-- ステータスバー -->
@@ -842,6 +928,49 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 </div><!-- /modal -->
 </div><!-- /overlay -->
 
+<!-- リマインダーポップアップ -->
+<div class="remind-overlay" id="remind-overlay">
+  <div class="remind-popup">
+    <div class="remind-popup-hd">
+      <span style="font-size:1.3rem">🔔</span>
+      <h3>今週のチェックリスト</h3>
+      <button style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer"
+              onclick="closeReminderPopup()">✕</button>
+    </div>
+    <div class="remind-popup-body">
+      <div class="remind-popup-week" id="remind-popup-week"></div>
+      <div id="remind-popup-items"></div>
+      <div class="remind-actions">
+        <button class="btn-later" onclick="closeReminderPopup()">後で確認</button>
+        <button class="btn-close-remind" onclick="closeReminderPopup()">✓ 閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 進捗・リマインダーパネル -->
+<div class="progress-section">
+  <div class="progress-section-hd">
+    <h2>📊 進捗管理 ／ 📋 週次チェックリスト</h2>
+    <div class="ptabs">
+      <div class="ptab active" data-tab="progress" onclick="showProgressTab('progress')">📊 コース進捗</div>
+      <div class="ptab" data-tab="reminder" onclick="showProgressTab('reminder')">📋 チェックリスト</div>
+    </div>
+  </div>
+
+  <!-- 進捗テーブル -->
+  <div class="ptab-content" id="ptab-progress">
+    <div id="progress-table-container">
+      <div class="prog-empty">読み込み中…</div>
+    </div>
+  </div>
+
+  <!-- リマインダーパネル -->
+  <div class="ptab-content" id="ptab-reminder" style="display:none">
+    <div id="reminder-panel-list">読み込み中…</div>
+  </div>
+</div>
+
 <script>
 // ══ 先生送信 ══
 const GH_REPO  = 'bestwaycare/koudouengo-attendance';
@@ -1024,11 +1153,238 @@ function closeModal(e){
 // フォームページへ遷移
 function showPage(page){
   if(page === 'form'){
-    // GAS上では同じWebアプリの別URLに遷移
-    // ローカルテスト時はform.htmlを直接開く
     window.open('https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec', '_blank');
   }
 }
+
+// ══════════════════════════════════════════
+//  🔔 週次リマインダー
+// ══════════════════════════════════════════
+const REMINDERS = [
+  { id: 'r_kintone', text: '出欠データを kintone に登録した' },
+  { id: 'r_cert',    text: '修了証発行が必要なコースを確認した' },
+  { id: 'r_sheet',   text: '来週分の研修の出席簿を確認した' },
+  { id: 'r_mail',    text: '担当の先生へ出席簿をメール送信した' },
+  { id: 'r_course',  text: 'コース一覧を更新した（refresh-courses 実行）' },
+];
+
+function getWeekKey(){
+  const d = new Date();
+  const day = d.getDay();
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return mon.toISOString().slice(0, 10);
+}
+
+function getReminderState(){
+  const week = getWeekKey();
+  const s = JSON.parse(localStorage.getItem('reminders') || '{}');
+  return s.week === week ? s : { week, items: {} };
+}
+
+function saveReminderState(s){ localStorage.setItem('reminders', JSON.stringify(s)); }
+
+function updateBellBadge(){
+  const s = getReminderState();
+  const undone = REMINDERS.filter(r => !s.items[r.id]).length;
+  const badge = document.getElementById('bell-badge');
+  if(!badge) return;
+  badge.textContent = undone;
+  badge.className = 'bell-badge' + (undone > 0 ? ' show' : '');
+}
+
+// ポップアップ表示
+function showReminderPopup(){
+  const s = getReminderState();
+  const week = s.week;
+  document.getElementById('remind-popup-week').textContent =
+    '今週（' + week + '〜）のチェックリスト';
+  document.getElementById('remind-popup-items').innerHTML =
+    REMINDERS.map(r => `
+      <div class="rpitem ${s.items[r.id]?'done':''}" id="rpop_${r.id}"
+           onclick="togglePopupItem('${r.id}')">
+        <input type="checkbox" id="rpchk_${r.id}" ${s.items[r.id]?'checked':''}>
+        <label for="rpchk_${r.id}">${r.text}</label>
+      </div>
+    `).join('');
+  document.getElementById('remind-overlay').classList.add('show');
+}
+
+function closeReminderPopup(){
+  document.getElementById('remind-overlay').classList.remove('show');
+  localStorage.setItem('reminderLastShown', new Date().toISOString().slice(0,10));
+  updateBellBadge();
+}
+
+function togglePopupItem(id){
+  const s = getReminderState();
+  s.items[id] = !s.items[id];
+  saveReminderState(s);
+  const row  = document.getElementById('rpop_' + id);
+  const chk  = document.getElementById('rpchk_' + id);
+  if(row){ row.classList.toggle('done', s.items[id]); }
+  if(chk){ chk.checked = s.items[id]; }
+  updateBellBadge();
+  renderReminderPanel(); // パネルも同期
+}
+
+// パネル（タブ内）表示
+function renderReminderPanel(){
+  const s = getReminderState();
+  const el = document.getElementById('reminder-panel-list');
+  if(!el) return;
+  el.innerHTML =
+    '<div class="rp-week-label">今週（' + s.week + '〜）のチェックリスト</div>' +
+    REMINDERS.map(r => `
+      <div class="rp-item ${s.items[r.id]?'done':''}" id="rp_${r.id}"
+           onclick="togglePanelItem('${r.id}')">
+        <input type="checkbox" id="rpanel_${r.id}" ${s.items[r.id]?'checked':''}>
+        <label for="rpanel_${r.id}">${r.text}</label>
+      </div>
+    `).join('') +
+    '<div class="rp-reset-note">毎週月曜日に自動リセットされます</div>';
+}
+
+function togglePanelItem(id){
+  const s = getReminderState();
+  s.items[id] = !s.items[id];
+  saveReminderState(s);
+  const row = document.getElementById('rp_' + id);
+  const chk = document.getElementById('rpanel_' + id);
+  if(row){ row.classList.toggle('done', s.items[id]); }
+  if(chk){ chk.checked = s.items[id]; }
+  updateBellBadge();
+}
+
+// ページ起動時：未チェックがあれば1日1回ポップアップ
+function checkAutoPopup(){
+  updateBellBadge();
+  const s = getReminderState();
+  const undone = REMINDERS.filter(r => !s.items[r.id]).length;
+  if(undone === 0) return;
+  const lastShown = localStorage.getItem('reminderLastShown') || '';
+  const today = new Date().toISOString().slice(0, 10);
+  if(lastShown !== today){
+    setTimeout(showReminderPopup, 900);
+  }
+}
+
+// ══════════════════════════════════════════
+//  📊 コース進捗ボード
+// ══════════════════════════════════════════
+const PROG_COLS = [
+  { key:'pdf',  label:'出席簿' },
+  { key:'mail', label:'メール' },
+  { key:'reg',  label:'kintone' },
+  { key:'cert', label:'修了証' },
+];
+
+function getProgData(){ return JSON.parse(localStorage.getItem('progressData') || '{}'); }
+function saveProgData(d){ localStorage.setItem('progressData', JSON.stringify(d)); }
+function getCourseCache(){ return JSON.parse(localStorage.getItem('progressCourseCache') || '[]'); }
+function saveCourseCache(c){ localStorage.setItem('progressCourseCache', JSON.stringify(c)); }
+
+async function loadProgressPanel(){
+  const token = localStorage.getItem('gh_token') || '';
+  let courses = getCourseCache();
+
+  if(token){
+    try {
+      const res = await fetch(
+        'https://api.github.com/repos/' + GH_REPO + '/contents/courses.json',
+        { headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github.v3.raw' } }
+      );
+      if(res.ok){
+        const fresh = await res.json();
+        // 手動追加分を保持しつつ courses.json を優先
+        const manual = courses.filter(c => !fresh.includes(c));
+        courses = [...fresh, ...manual];
+        saveCourseCache(courses);
+      }
+    } catch(e){}
+  }
+  renderProgressTable(courses);
+}
+
+function renderProgressTable(courses){
+  const data = getProgData();
+  const cont = document.getElementById('progress-table-container');
+  if(!cont) return;
+
+  const thead = '<tr><th>コース名</th>' +
+    PROG_COLS.map(c=>`<th style="width:76px">${c.label}</th>`).join('') +
+    '<th style="width:36px"></th></tr>';
+
+  const tbody = courses.length === 0
+    ? '<tr><td colspan="6" class="prog-empty">コースがありません<br><small>下の入力欄から手動追加、またはトークンを設定してください</small></td></tr>'
+    : courses.map(c => {
+        const cd = data[c] || {};
+        const ec = encodeURIComponent(c);
+        const cells = PROG_COLS.map(f =>
+          `<td style="text-align:center">
+            <div class="prog-chk ${cd[f.key]?'on':''}"
+                 onclick="toggleProg('${ec}','${f.key}',this)">${cd[f.key]?'✓':''}</div>
+          </td>`
+        ).join('');
+        return `<tr><td style="font-size:.85rem;font-weight:500">${c}</td>${cells}
+          <td style="text-align:center">
+            <button class="prog-del" onclick="deleteProg('${ec}')">✕</button>
+          </td></tr>`;
+      }).join('');
+
+  cont.innerHTML = `
+    <div class="prog-wrap">
+      <table class="prog-table">
+        <thead>${thead}</thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>
+    <div class="prog-add-row">
+      <input id="prog-add-inp" type="text" placeholder="コース名を手動追加（例: 6月7日14日(土)）">
+      <button onclick="addProgCourse()">＋ 追加</button>
+    </div>`;
+}
+
+function toggleProg(ec, field, el){
+  const c = decodeURIComponent(ec);
+  const d = getProgData();
+  if(!d[c]) d[c] = {};
+  d[c][field] = !d[c][field];
+  saveProgData(d);
+  el.classList.toggle('on', d[c][field]);
+  el.textContent = d[c][field] ? '✓' : '';
+}
+
+function deleteProg(ec){
+  const c = decodeURIComponent(ec);
+  const d = getProgData(); delete d[c]; saveProgData(d);
+  const cache = getCourseCache().filter(x => x !== c);
+  saveCourseCache(cache);
+  renderProgressTable(cache);
+}
+
+function addProgCourse(){
+  const inp = document.getElementById('prog-add-inp');
+  const name = inp?.value.trim();
+  if(!name) return;
+  const cache = getCourseCache();
+  if(!cache.includes(name)){ cache.push(name); saveCourseCache(cache); }
+  inp.value = '';
+  renderProgressTable(cache);
+}
+
+function showProgressTab(tab){
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ptab-content').forEach(c => c.style.display='none');
+  document.querySelector(`.ptab[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('ptab-' + tab).style.display = 'block';
+  if(tab === 'progress') loadProgressPanel();
+  if(tab === 'reminder') renderReminderPanel();
+}
+
+// ── 起動処理 ──
+checkAutoPopup();
+loadProgressPanel();
 </script>
 </body>
 </html>
