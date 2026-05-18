@@ -126,6 +126,28 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 .modal-btn.orange{background:#ca6f1e}
 .modal-btn.gray  {background:#5d6d7e}
 .modal-btn.ext   {background:#2980b9}
+.modal-btn.red   {background:#c0392b}
+/* 先生送信モーダル専用 */
+.teacher-check{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border:1.5px solid #e0e4ea;border-radius:8px;margin-bottom:8px;cursor:pointer;
+  transition:border-color .15s,background .15s}
+.teacher-check:hover{background:#f5f8ff;border-color:#1a5276}
+.teacher-check input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:#1a5276}
+.teacher-check .tc-name{font-weight:700;font-size:.9rem;color:#333}
+.teacher-check .tc-email{font-size:.78rem;color:#888;margin-top:1px}
+.course-select{width:100%;padding:10px 12px;border:1.5px solid #ccc;border-radius:7px;
+  font-size:.9rem;font-family:inherit;margin-bottom:14px;
+  background:#fff;appearance:none;-webkit-appearance:none}
+.course-select:focus{outline:none;border-color:#1a5276;box-shadow:0 0 0 3px rgba(26,82,118,.1)}
+.send-result{border-radius:6px;padding:10px 14px;font-size:.85rem;margin-top:12px;display:none}
+.send-result.ok{background:#d5f5e3;border:1px solid #82e0aa;color:#1e8449}
+.send-result.err{background:#fde8e8;border:1px solid #f5a6a6;color:#c0392b}
+.gh-token-area{background:#f8f9fa;border:1px solid #e0e4ea;border-radius:7px;
+  padding:12px;margin-bottom:14px}
+.gh-token-area label{font-size:.78rem;font-weight:600;color:#555;display:block;margin-bottom:5px}
+.gh-token-area input{width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;
+  font-size:.83rem;font-family:monospace;background:#fff}
+.gh-token-area small{font-size:.72rem;color:#aaa;margin-top:4px;display:block}
 .modal-warn{background:#fde8e8;border:1px solid #f5a6a6;border-radius:6px;
             padding:9px 12px;font-size:.82rem;color:#c0392b;margin-top:10px;
             line-height:1.6}
@@ -202,6 +224,18 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <div class="item-icon teal">🎬</div>
         <div class="item-text">動画視聴CSVを取り込む
           <div class="item-sub">LMSからDLしたCSVをアップロード</div>
+        </div>
+        <span class="item-badge badge-manual">手動</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
+      <div class="section-title" style="background:#1a6b3c">先生へ出席簿を送る</div>
+      <a class="item" onclick="openModal('send-teachers')">
+        <div class="item-icon green">📨</div>
+        <div class="item-text">先生へ出席簿PDFを送信
+          <div class="item-sub">コース選択→先生にチェック→送信</div>
         </div>
         <span class="item-badge badge-manual">手動</span>
         <span class="arrow">›</span>
@@ -372,6 +406,51 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 ══════════════════════════════ -->
 <div class="overlay" id="overlay" onclick="closeModal(event)">
 <div class="modal" id="modal">
+
+  <!-- 先生へ出席簿を送る -->
+  <div id="m-send-teachers" style="display:none">
+    <div class="modal-header" style="background:#1a6b3c">
+      <span style="font-size:1.3rem">📨</span>
+      <h3>先生へ出席簿PDFを送る</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- GitHubトークン -->
+      <div class="gh-token-area">
+        <label>🔑 GitHub アクセストークン（初回のみ入力）</label>
+        <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+               oninput="saveToken(this.value)">
+        <small>※ 入力するとこのブラウザに保存されます。<a href="https://github.com/settings/tokens/new?scopes=workflow&description=送信用" target="_blank" style="color:#1a5276">トークンを作成</a>（workflow スコープのみ必要）</small>
+      </div>
+
+      <!-- コース選択 -->
+      <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">① 送るコースを選ぶ</div>
+      <select class="course-select" id="teacher-course-sel">
+        <option value="">── コースを読み込み中… ──</option>
+      </select>
+
+      <!-- 先生チェックリスト -->
+      <div style="margin-bottom:8px;font-size:.82rem;font-weight:600;color:#555">② 送る先生にチェック</div>
+      <div id="teacher-checklist">
+        <div class="teacher-check" onclick="toggleCheck('chk-0')">
+          <input type="checkbox" id="chk-0" value="kouza@e-bestway.net">
+          <div><div class="tc-name">馬淵敦士</div><div class="tc-email">kouza@e-bestway.net</div></div>
+        </div>
+        <div class="teacher-check" onclick="toggleCheck('chk-1')">
+          <input type="checkbox" id="chk-1" value="kosumosu1010@gmail.com">
+          <div><div class="tc-name">谷口佐知子</div><div class="tc-email">kosumosu1010@gmail.com</div></div>
+        </div>
+      </div>
+
+      <div id="send-result" class="send-result"></div>
+
+      <button class="modal-btn" style="background:#1a6b3c;margin-top:16px"
+              id="send-teacher-btn" onclick="sendToTeachers()">
+        📨 出席簿を送信する
+      </button>
+    </div>
+  </div>
 
   <!-- ユーザー詳細CSVのタイミング説明 -->
   <div id="m-userdetail-when" style="display:none">
@@ -771,6 +850,112 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 </div><!-- /overlay -->
 
 <script>
+// ══ 先生送信 ══
+const GH_REPO  = 'bestwaycare/koudouengo-attendance';
+const GH_WF    = 'send-teachers.yml';
+
+// コース一覧をGASから取得してselectに展開
+const GAS_URL  = 'https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec';
+
+function loadCoursesForTeacher(){
+  const sel = document.getElementById('teacher-course-sel');
+  if(!sel) return;
+  fetch(GAS_URL + '?action=getAllDates')
+    .then(r => r.json())
+    .then(data => {
+      const courses = [...new Set((data||[]).map(d => d.course))];
+      sel.innerHTML = '<option value="">── コースを選択 ──</option>';
+      courses.forEach(c => {
+        sel.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`);
+      });
+    })
+    .catch(() => {
+      // GASから取れない場合は手入力モードに
+      sel.outerHTML = '<input id="teacher-course-sel" class="course-select" placeholder="コース名を入力（例: 5月20日27日(水)）">';
+    });
+}
+
+function toggleCheck(id){
+  const cb = document.getElementById(id);
+  if(cb) cb.checked = !cb.checked;
+}
+
+function saveToken(val){
+  if(val) localStorage.setItem('gh_token', val);
+}
+
+function loadToken(){
+  const t = localStorage.getItem('gh_token') || '';
+  const el = document.getElementById('gh-token');
+  if(el && t) el.value = t;
+}
+
+async function sendToTeachers(){
+  const token = document.getElementById('gh-token')?.value.trim()
+              || localStorage.getItem('gh_token') || '';
+  const courseEl = document.getElementById('teacher-course-sel');
+  const course = courseEl ? courseEl.value.trim() : '';
+  const emails = [...document.querySelectorAll('#teacher-checklist input[type=checkbox]:checked')]
+                   .map(cb => cb.value);
+  const result = document.getElementById('send-result');
+  const btn    = document.getElementById('send-teacher-btn');
+
+  result.style.display = 'none';
+
+  if(!token){ showSendResult('GitHubトークンを入力してください。', false); return; }
+  if(!course){ showSendResult('コースを選択してください。', false); return; }
+  if(!emails.length){ showSendResult('送信する先生を1人以上選んでください。', false); return; }
+
+  btn.textContent = '⏳ 送信中…';
+  btn.style.opacity = '.6';
+  btn.onclick = null;
+
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/actions/workflows/${GH_WF}/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: {
+            course_name:    course,
+            teacher_emails: emails.join(',')
+          }
+        })
+      }
+    );
+
+    if(res.status === 204){
+      showSendResult(`✅ 送信ジョブを開始しました！\n数分後に ${emails.join('、')} へ届きます。`, true);
+    } else {
+      const body = await res.json().catch(()=>({}));
+      showSendResult('❌ エラー: ' + (body.message || res.status), false);
+    }
+  } catch(e) {
+    showSendResult('❌ 通信エラー: ' + e.message, false);
+  }
+
+  btn.textContent = '📨 出席簿を送信する';
+  btn.style.opacity = '1';
+  btn.onclick = sendToTeachers;
+}
+
+function showSendResult(msg, ok){
+  const el = document.getElementById('send-result');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'send-result ' + (ok ? 'ok' : 'err');
+  el.style.display = 'block';
+}
+
+// モーダルを開くときにコースとトークンをロード
+const _origOpenModal = typeof openModal === 'function' ? openModal : null;
+
 // 現在時刻
 function updateTime(){
   const now = new Date();
