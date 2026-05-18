@@ -424,22 +424,16 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <small>※ 入力するとこのブラウザに保存されます。<a href="https://github.com/settings/tokens/new?scopes=workflow&description=送信用" target="_blank" style="color:#1a5276">トークンを作成</a>（workflow スコープのみ必要）</small>
       </div>
 
-      <!-- コース入力 -->
-      <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">① 送るコースを入力（スプレッドシートのコース名をそのままコピー）</div>
-      <input type="text" id="teacher-course-sel" class="course-select"
-             placeholder="例: 5月20日27日(水)" autocomplete="off">
+      <!-- コース選択 -->
+      <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">① コースを選ぶ</div>
+      <select id="teacher-course-sel" class="course-select">
+        <option value="">── 読み込み中… ──</option>
+      </select>
 
       <!-- 先生チェックリスト -->
       <div style="margin-bottom:8px;font-size:.82rem;font-weight:600;color:#555">② 送る先生にチェック</div>
       <div id="teacher-checklist">
-        <div class="teacher-check" onclick="toggleCheck('chk-0')">
-          <input type="checkbox" id="chk-0" value="kouza@e-bestway.net">
-          <div><div class="tc-name">馬淵敦士</div><div class="tc-email">kouza@e-bestway.net</div></div>
-        </div>
-        <div class="teacher-check" onclick="toggleCheck('chk-1')">
-          <input type="checkbox" id="chk-1" value="kosumosu1010@gmail.com">
-          <div><div class="tc-name">谷口佐知子</div><div class="tc-email">kosumosu1010@gmail.com</div></div>
-        </div>
+        <div style="color:#999;font-size:.82rem;padding:8px 0">読み込み中…</div>
       </div>
 
       <div id="send-result" class="send-result"></div>
@@ -852,6 +846,7 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 // ══ 先生送信 ══
 const GH_REPO  = 'bestwaycare/koudouengo-attendance';
 const GH_WF    = 'send-teachers.yml';
+const RAW_BASE = 'https://raw.githubusercontent.com/bestwaycare/koudouengo-attendance/main';
 
 function toggleCheck(id){
   const cb = document.getElementById(id);
@@ -866,6 +861,54 @@ function loadToken(){
   const t = localStorage.getItem('gh_token') || '';
   const el = document.getElementById('gh-token');
   if(el && t) el.value = t;
+}
+
+async function loadSendTeachersModal(){
+  // ── 先生リスト（teachers.json から動的生成）──
+  try {
+    const teachers = await fetch(RAW_BASE + '/teachers.json?_=' + Date.now()).then(r => r.json());
+    const list = document.getElementById('teacher-checklist');
+    if(list){
+      list.innerHTML = teachers.map((t, i) => `
+        <div class="teacher-check" onclick="toggleCheck('chk-${i}')">
+          <input type="checkbox" id="chk-${i}" value="${t.email}">
+          <div>
+            <div class="tc-name">${t.name}</div>
+            <div class="tc-email">${t.email}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch(e) {
+    const list = document.getElementById('teacher-checklist');
+    if(list) list.innerHTML = '<div style="color:#c0392b;font-size:.82rem">先生リストの取得に失敗しました</div>';
+  }
+
+  // ── コース一覧（courses.json から動的生成）──
+  try {
+    const courses = await fetch(RAW_BASE + '/courses.json?_=' + Date.now()).then(r => r.json());
+    const sel = document.getElementById('teacher-course-sel');
+    if(sel){
+      if(courses.length === 0){
+        sel.innerHTML = '<option value="">── コースがありません（更新ワークフローを実行してください）──</option>';
+      } else {
+        sel.innerHTML = '<option value="">── コースを選択 ──</option>' +
+          courses.map(c => `<option value="${c}">${c}</option>`).join('');
+      }
+    }
+  } catch(e) {
+    const sel = document.getElementById('teacher-course-sel');
+    if(sel) sel.innerHTML = '<option value="">── 取得失敗（直接入力してください）──</option>';
+    // 取得失敗時はテキスト入力に切り替え
+    const sel2 = document.getElementById('teacher-course-sel');
+    if(sel2){
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.id = 'teacher-course-sel';
+      inp.className = 'course-select';
+      inp.placeholder = '例: 5月20日27日(水)';
+      sel2.replaceWith(inp);
+    }
+  }
 }
 
 async function sendToTeachers(){
@@ -950,7 +993,7 @@ function openModal(id){
   const m = document.getElementById('m-' + id);
   if(m){ m.style.display='block'; }
   document.getElementById('overlay').classList.add('show');
-  if(id === 'send-teachers') loadToken();
+  if(id === 'send-teachers'){ loadToken(); loadSendTeachersModal(); }
 }
 
 function closeModal(e){
