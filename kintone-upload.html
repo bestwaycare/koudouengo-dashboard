@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kintone CSVアップローダー</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222636;
+    --border: #2e3347;
+    --accent: #4f8ef7;
+    --accent2: #7c6af7;
+    --success: #34d399;
+    --error: #f87171;
+    --warn: #fbbf24;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+
+  header p {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus,
+  input[type="password"]:focus {
+    border-color: var(--accent);
+  }
+
+  .tab-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .tab.active {
+    background: linear-gradient(135deg, rgba(79,142,247,0.15), rgba(124,106,247,0.15));
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .drop-zone:hover,
+  .drop-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.05);
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-zone .icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .drop-zone p {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .drop-zone .filename {
+    color: var(--success);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    margin-top: 16px;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+
+  .preview-table th {
+    background: var(--surface2);
+    color: var(--text-dim);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .preview-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .preview-table tr:last-child td { border-bottom: none; }
+  .preview-table tr:hover td { background: var(--surface2); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin: 16px 0;
+    overflow: hidden;
+    display: none;
+  }
+
+  .progress-bar.active { display: block; }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .log {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    display: none;
+  }
+
+  .log.active { display: block; }
+
+  .log-line {
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+  }
+
+  .log-line:last-child { border-bottom: none; }
+
+  .log-time { color: var(--text-muted); min-width: 60px; }
+  .log-ok { color: var(--success); }
+  .log-err { color: var(--error); }
+  .log-skip { color: var(--warn); }
+  .log-info { color: var(--text-dim); }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .summary.active { display: grid; }
+
+  .summary-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .summary-num {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .summary-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .num-ok { color: var(--success); }
+  .num-skip { color: var(--warn); }
+  .num-err { color: var(--error); }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-blue { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .badge-purple { background: rgba(124,106,247,0.15); color: var(--accent2); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>kintone CSVアップローダー</h1>
+    <p>行動援護シート・ユーザー詳細CSVをkintoneアプリ（ID: 279）に登録します</p>
+  </header>
+
+  <!-- API設定 -->
+  <div class="card">
+    <div class="card-title">API設定</div>
+    <div class="field">
+      <label>サブドメイン</label>
+      <input type="text" id="subdomain" value="azoch3bdyyq2" />
+    </div>
+    <div class="field">
+      <label>APIトークン</label>
+      <input type="password" id="apiToken" value="84Y7rrXblPd7oxkZ8DWYdtj99AZcUAPyBs9NNLJO" />
+    </div>
+    <div class="field">
+      <label>GAS WebアプリURL（行動援護シート取得用）</label>
+      <input type="text" id="gasUrl" value="https://script.google.com/macros/s/AKfycbxKw0V1Z4-iBZ66pNo9IVUgp0vSba9b6EgwCag2yUkPh52naoVRYhMED2Vbf1vF_Ejk/exec" />
+    </div>
+  </div>
+
+  <!-- タブ切替 -->
+  <div class="tab-group">
+    <button class="tab active" onclick="switchTab('koudo')">
+      📋 行動援護シート
+      <span class="badge badge-blue" style="margin-left:4px">注文IDキー</span>
+    </button>
+    <button class="tab" onclick="switchTab('userdetail')">
+      👤 ユーザー詳細CSV
+      <span class="badge badge-purple" style="margin-left:4px">姓＋名キー</span>
+    </button>
+  </div>
+
+  <!-- 行動援護タブ -->
+  <div id="tab-koudo" class="tab-content active">
+    <div class="card">
+      <div class="card-title">行動援護シート</div>
+      <p style="color:var(--text-muted);font-size:12px;margin-bottom:16px">
+        GoogleスプレッドシートIDを入力して「データ取得」を押してください。<br>
+        キー：注文ID　／　GAS経由でスプレッドシートを直接読み込みます
+      </p>
+      <div class="field">
+        <label>スプレッドシートID</label>
+        <input type="text" id="sheetId" value="1SP0afEBrGj19w6OvODOpqSohVn3kxpp6E6_-0w4stDI" />
+      </div>
+      <div class="field">
+        <label>シート名</label>
+        <input type="text" id="sheetName" value="行動援護" />
+      </div>
+      <button class="btn btn-primary" id="btn-fetch" onclick="fetchSheetData()" style="margin-bottom:16px">
+        🔄 スプレッドシートからデータ取得
+      </button>
+      <div id="preview-koudo"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-koudo" disabled onclick="startUpload('koudo')" style="background:linear-gradient(135deg,#34d399,#059669)">
+      ⬆️ kintoneに登録する
+    </button>
+  </div>
+
+  <!-- ユーザー詳細タブ -->
+  <div id="tab-userdetail" class="tab-content">
+    <div class="card">
+      <div class="card-title">ユーザー詳細CSV（Shift-JIS）</div>
+      <p style="color:var(--text-muted);font-size:12px;margin-bottom:16px">
+        システムからエクスポートしたユーザー詳細CSVをアップロードしてください。<br>
+        キー：姓＋名（全角スペース）　／　エンコード：Shift-JIS を自動変換
+      </p>
+      <div class="drop-zone" id="dz-userdetail">
+        <input type="file" accept=".csv" id="file-userdetail" onchange="loadFile('userdetail')">
+        <div class="icon">📂</div>
+        <p>クリックまたはドロップしてCSVを選択</p>
+        <div class="filename" id="fname-userdetail"></div>
+      </div>
+      <div id="preview-userdetail"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-userdetail" disabled onclick="startUpload('userdetail')">
+      ⬆️ kintoneに登録する
+    </button>
+  </div>
+
+  <!-- 進捗・ログ -->
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+
+  <div class="summary" id="summary">
+    <div class="summary-item">
+      <div class="summary-num num-ok" id="cnt-ok">0</div>
+      <div class="summary-label">登録成功</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num num-skip" id="cnt-skip">0</div>
+      <div class="summary-label">スキップ（重複）</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num num-err" id="cnt-err">0</div>
+      <div class="summary-label">エラー</div>
+    </div>
+  </div>
+
+  <div class="log" id="logBox"></div>
+</div>
+
+<script>
+// ===================================================
+// 設定
+// ===================================================
+var APP_ID = 279;
+var parsedData = { koudo: [], userdetail: [] };
+
+// ===================================================
+// タブ切替
+// ===================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+  event.currentTarget.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ===================================================
+// スプレッドシートからデータ取得（GAS経由）
+// ===================================================
+function fetchSheetData() {
+  var gasUrl   = document.getElementById('gasUrl').value.trim();
+  var sheetId  = document.getElementById('sheetId').value.trim();
+  var sheetName= document.getElementById('sheetName').value.trim();
+  var btn      = document.getElementById('btn-fetch');
+
+  if (!gasUrl || !sheetId) {
+    alert('GAS URLとスプレッドシートIDを入力してください');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 取得中...';
+
+  var url = gasUrl + '?action=getSheetData&sheetId=' + encodeURIComponent(sheetId) + '&sheetName=' + encodeURIComponent(sheetName);
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        alert('エラー: ' + data.error);
+        btn.disabled = false;
+        btn.textContent = '🔄 スプレッドシートからデータ取得';
+        return;
+      }
+
+      // マッピング
+      parsedData.koudo = data.rows.map(function(r) {
+        var orderId = (r['注文ID'] || '').trim();
+        if (!orderId) return null;
+        return {
+          _key    : orderId,
+          注文ID  : orderId,
+          コース名: (r['コース'] || '').trim(),
+          姓      : (r['受講者：姓'] || '').trim(),
+          名      : (r['受講者：名'] || '').trim(),
+          フリガナ: (r['フリガナ'] || '').trim(),
+          メールアドレス   : (r['メールアドレス'] || '').trim(),
+          電話番号         : (r['電話番号'] || '').trim(),
+          送付先郵便番号   : (r['送付先郵便番号'] || '').trim(),
+          送付先都道府県   : (r['送付先都道府県'] || '').trim(),
+          送付先住所       : (r['送付先住所'] || '').trim(),
+          送付先事業所名   : (r['送付先事業所名（個人宅送付以外必須）'] || '').trim(),
+          備考             : (r['備考'] || '').trim()
+        };
+      }).filter(Boolean);
+
+      showPreview('koudo');
+      document.getElementById('btn-koudo').disabled = false;
+      btn.disabled = false;
+      btn.textContent = '✅ ' + parsedData.koudo.length + ' 件取得済み';
+    })
+    .catch(function(err) {
+      alert('取得エラー: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = '🔄 スプレッドシートからデータ取得';
+    });
+}
+
+// ===================================================
+// ドラッグ＆ドロップ
+// ===================================================
+// userdetailのみドロップゾーン設定
+var dzUd = document.getElementById('dz-userdetail');
+dzUd.addEventListener('dragover', function(e) { e.preventDefault(); dzUd.classList.add('dragover'); });
+dzUd.addEventListener('dragleave', function() { dzUd.classList.remove('dragover'); });
+dzUd.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dzUd.classList.remove('dragover');
+  var file = e.dataTransfer.files[0];
+  if (file) processFile('userdetail', file);
+});
+
+// ===================================================
+// ファイル読み込み
+// ===================================================
+function loadFile(name) {
+  var file = document.getElementById('file-' + name).files[0];
+  if (file) processFile(name, file);
+}
+
+function processFile(name, file) {
+  document.getElementById('fname-' + name).textContent = file.name;
+
+  if (name === 'userdetail') {
+    // Shift-JIS → UTF-8変換
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var uint8 = new Uint8Array(e.target.result);
+      var text = decodeShiftJIS(uint8);
+      parseCSV(name, text);
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    var reader = new FileReader();
+    reader.onload = function(e) { parseCSV(name, e.target.result); };
+    reader.readAsText(file, 'UTF-8');
+  }
+}
+
+// ===================================================
+// Shift-JIS デコード
+// ===================================================
+function decodeShiftJIS(uint8) {
+  var td = new TextDecoder('shift_jis');
+  return td.decode(uint8);
+}
+
+// ===================================================
+// CSV パース
+// ===================================================
+function parseCSV(name, text) {
+  var lines = text.split('\n').filter(function(l) { return l.trim(); });
+  var rows = lines.map(function(line) { return parseCSVLine(line); });
+  var headers = rows[0];
+  var data = rows.slice(1).filter(function(r) { return r.length > 1; });
+
+  if (name === 'koudo') {
+    parsedData.koudo = data.map(function(r) { return mapKoudo(headers, r); }).filter(Boolean);
+  } else {
+    parsedData.userdetail = data.map(function(r) { return mapUserDetail(headers, r); }).filter(Boolean);
+  }
+
+  showPreview(name);
+  document.getElementById('btn-' + name).disabled = false;
+}
+
+function parseCSVLine(line) {
+  var result = [];
+  var cur = '';
+  var inQuote = false;
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (c === '"') {
+      if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
+      else inQuote = !inQuote;
+    } else if (c === ',' && !inQuote) {
+      result.push(cur.trim()); cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+// ===================================================
+// マッピング：行動援護シート
+// ===================================================
+function mapKoudo(headers, row) {
+  function get(name) {
+    var idx = headers.indexOf(name);
+    return idx >= 0 ? (row[idx] || '').trim() : '';
+  }
+  var orderId = get('注文ID');
+  if (!orderId) return null;
+  return {
+    _key: orderId,
+    _keyField: '注文ID',
+    注文ID: orderId,
+    コース名: get('コース'),
+    姓: get('受講者：姓'),
+    名: get('受講者：名'),
+    フリガナ: get('フリガナ'),
+    メールアドレス: get('メールアドレス'),
+    電話番号: get('電話番号'),
+    送付先郵便番号: get('送付先郵便番号'),
+    送付先都道府県: get('送付先都道府県'),
+    送付先住所: get('送付先住所'),
+    送付先事業所名: get('送付先事業所名（個人宅送付以外必須）'),
+    備考: get('備考')
+  };
+}
+
+// ===================================================
+// マッピング：ユーザー詳細CSV
+// ===================================================
+function mapUserDetail(headers, row) {
+  function getIdx(idx) { return (row[idx] || '').trim(); }
+  var sei = getIdx(9);
+  var mei = getIdx(10);
+  if (!sei && !mei) return null;
+
+  // 生年月日フォーマット変換: 1976/06/09 → 1976-06-09
+  var birthday = getIdx(27).replace(/\//g, '-');
+
+  return {
+    _key: sei + '\u3000' + mei,  // 全角スペース
+    _keyField: '氏名',            // kintone計算フィールド（姓＋名で検索）
+    姓: sei,
+    名: mei,
+    フリガナ: getIdx(11) + '\u3000' + getIdx(12),
+    メールアドレス: getIdx(13),
+    郵便番号: getIdx(15),
+    送付先都道府県: getIdx(16),
+    送付先住所: getIdx(17),
+    電話番号: getIdx(21) || getIdx(22),
+    生年月日: birthday,
+    コース名: getIdx(4)
+  };
+}
+
+// ===================================================
+// プレビュー表示
+// ===================================================
+function showPreview(name) {
+  var data = parsedData[name];
+  if (!data.length) return;
+  var sample = data.slice(0, 3);
+  var keys = Object.keys(sample[0]).filter(function(k) { return !k.startsWith('_'); });
+
+  var html = '<div style="overflow-x:auto"><table class="preview-table">';
+  html += '<tr>' + keys.map(function(k) { return '<th>' + k + '</th>'; }).join('') + '</tr>';
+  sample.forEach(function(row) {
+    html += '<tr>' + keys.map(function(k) { return '<td title="' + (row[k]||'') + '">' + (row[k]||'') + '</td>'; }).join('') + '</tr>';
+  });
+  html += '</table></div>';
+  html += '<p style="color:var(--text-muted);font-size:11px;margin-top:8px">先頭3件プレビュー / 全 <strong style="color:var(--text)">' + data.length + '</strong> 件</p>';
+
+  document.getElementById('preview-' + name).innerHTML = html;
+}
+
+// ===================================================
+// アップロード処理
+// ===================================================
+function startUpload(name) {
+  var data = parsedData[name];
+  if (!data.length) return;
+
+  var subdomain = document.getElementById('subdomain').value.trim();
+  var apiToken  = document.getElementById('apiToken').value.trim();
+  var baseUrl   = 'https://' + subdomain + '.cybozu.com/k/v1/';
+
+  var logBox  = document.getElementById('logBox');
+  var progBar = document.getElementById('progressBar');
+  var progFill= document.getElementById('progressFill');
+  var summary = document.getElementById('summary');
+
+  logBox.innerHTML = '';
+  logBox.classList.add('active');
+  progBar.classList.add('active');
+  summary.classList.remove('active');
+
+  var cntOk = 0, cntSkip = 0, cntErr = 0;
+  var idx = 0;
+
+  function addLog(type, msg) {
+    var now = new Date();
+    var t = ('0'+now.getHours()).slice(-2) + ':' + ('0'+now.getMinutes()).slice(-2) + ':' + ('0'+now.getSeconds()).slice(-2);
+    var line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = '<span class="log-time">' + t + '</span><span class="log-' + type + '">' + msg + '</span>';
+    logBox.appendChild(line);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function updateProgress() {
+    var pct = Math.round((idx / data.length) * 100);
+    progFill.style.width = pct + '%';
+  }
+
+  function processNext() {
+    if (idx >= data.length) {
+      addLog('info', '=== 完了 ===');
+      document.getElementById('cnt-ok').textContent   = cntOk;
+      document.getElementById('cnt-skip').textContent = cntSkip;
+      document.getElementById('cnt-err').textContent  = cntErr;
+      summary.classList.add('active');
+      return;
+    }
+
+    var record = data[idx];
+    idx++;
+    updateProgress();
+
+    // 既存レコードを検索
+    searchRecord(baseUrl, apiToken, name, record, function(existingId) {
+      var kintoneRecord = buildKintoneRecord(name, record);
+
+      if (existingId) {
+        // 更新
+        putRecord(baseUrl, apiToken, existingId, kintoneRecord, function(ok, msg) {
+          if (ok) {
+            cntOk++;
+            addLog('ok', '更新: ' + record._key);
+          } else {
+            cntErr++;
+            addLog('err', 'エラー: ' + record._key + ' / ' + msg);
+          }
+          processNext();
+        });
+      } else {
+        // 新規登録
+        postRecord(baseUrl, apiToken, kintoneRecord, function(ok, msg) {
+          if (ok) {
+            cntOk++;
+            addLog('ok', '新規: ' + record._key);
+          } else {
+            cntErr++;
+            addLog('err', 'エラー: ' + record._key + ' / ' + msg);
+          }
+          processNext();
+        });
+      }
+    });
+  }
+
+  addLog('info', data.length + ' 件の処理を開始します');
+  processNext();
+}
+
+// ===================================================
+// kintone 既存レコード検索
+// ===================================================
+function searchRecord(baseUrl, apiToken, name, record, cb) {
+  var query;
+  if (name === 'koudo') {
+    query = '注文ID = "' + record._key + '"';
+  } else {
+    // 姓＋名で検索
+    query = '姓 = "' + record['姓'] + '" and 名 = "' + record['名'] + '"';
+  }
+
+  var url = baseUrl + 'records.json?app=' + APP_ID +
+            '&query=' + encodeURIComponent(query + ' limit 1') +
+            '&fields[]=' + encodeURIComponent('レコード番号');
+
+  fetch(url, { headers: { 'X-Cybozu-API-Token': apiToken } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.records && data.records.length > 0) {
+        cb(data.records[0]['レコード番号'].value);
+      } else {
+        cb(null);
+      }
+    })
+    .catch(function() { cb(null); });
+}
+
+// ===================================================
+// kintoneレコード構築
+// ===================================================
+function buildKintoneRecord(name, record) {
+  var r = {};
+  var fieldMap;
+
+  if (name === 'koudo') {
+    fieldMap = ['注文ID','コース名','姓','名','フリガナ','メールアドレス',
+                '電話番号','送付先郵便番号','送付先都道府県','送付先住所','送付先事業所名','備考'];
+  } else {
+    fieldMap = ['姓','名','フリガナ','メールアドレス','送付先都道府県',
+                '送付先住所','電話番号','コース名'];
+  }
+
+  fieldMap.forEach(function(f) {
+    if (record[f] !== undefined && record[f] !== '') {
+      r[f] = { value: record[f] };
+    }
+  });
+
+  // 生年月日（DATE型）
+  if (name === 'userdetail' && record['生年月日']) {
+    r['生年月日'] = { value: record['生年月日'] };
+  }
+
+  // 郵便番号（userdetailは列名が違う）
+  if (name === 'userdetail' && record['郵便番号']) {
+    r['送付先郵便番号'] = { value: record['郵便番号'] };
+  }
+
+  return r;
+}
+
+// ===================================================
+// kintone POST（新規）
+// ===================================================
+function postRecord(baseUrl, apiToken, record, cb) {
+  fetch(baseUrl + 'record.json', {
+    method: 'POST',
+    headers: {
+      'X-Cybozu-API-Token': apiToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ app: APP_ID, record: record })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    cb(d.id ? true : false, d.message || '');
+  })
+  .catch(function(e) { cb(false, e.message); });
+}
+
+// ===================================================
+// kintone PUT（更新）
+// ===================================================
+function putRecord(baseUrl, apiToken, recordId, record, cb) {
+  fetch(baseUrl + 'record.json', {
+    method: 'PUT',
+    headers: {
+      'X-Cybozu-API-Token': apiToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ app: APP_ID, id: recordId, record: record })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    cb(d.revision ? true : false, d.message || '');
+  })
+  .catch(function(e) { cb(false, e.message); });
+}
+</script>
+</body>
+</html>

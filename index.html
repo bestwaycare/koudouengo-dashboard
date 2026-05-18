@@ -233,6 +233,25 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
     <div class="col-header sometimes">〈 時々行う作業 〉<small>必要なときだけ操作</small></div>
 
     <div class="section">
+      <div class="section-title" style="background:#0e6655">kintone データ登録</div>
+      <a class="item" href="kintone-upload.html" target="_blank">
+        <div class="item-icon teal">👤</div>
+        <div class="item-text">ユーザー詳細CSVをkintoneに登録
+          <div class="item-sub">生年月日・住所など詳細情報を一括登録</div>
+        </div>
+        <span class="item-badge badge-manual">手動</span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openModal('userdetail-when')">
+        <div class="item-icon teal">❓</div>
+        <div class="item-text">いつ登録するの？
+          <div class="item-sub">タイミングと手順を確認</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
       <div class="section-title orange">出席簿</div>
       <a class="item" onclick="openModal('pdf-manual')">
         <div class="item-icon orange">📄</div>
@@ -353,6 +372,30 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 ══════════════════════════════ -->
 <div class="overlay" id="overlay" onclick="closeModal(event)">
 <div class="modal" id="modal">
+
+  <!-- ユーザー詳細CSVのタイミング説明 -->
+  <div id="m-userdetail-when" style="display:none">
+    <div class="modal-header" style="background:#0e6655">
+      <span style="font-size:1.3rem">👤</span>
+      <h3>ユーザー詳細CSVの登録タイミング</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>受講者の<strong>生年月日・住所・電話番号</strong>などをkintoneに登録します。修了証の発行前に必ず実施してください。</p>
+      <ol class="modal-steps">
+        <li>受講申し込みシステムから<strong>ユーザー詳細CSV</strong>をダウンロード（Shift-JIS形式）</li>
+        <li>「ユーザー詳細CSVをkintoneに登録」をクリックして専用画面を開く</li>
+        <li>「👤 ユーザー詳細CSV」タブを選択</li>
+        <li>CSVファイルをドラッグ＆ドロップ</li>
+        <li>「kintoneに登録する」ボタンを押す</li>
+        <li>登録完了後、kintoneで生年月日が入っているか確認</li>
+      </ol>
+      <div class="modal-tip">💡 生年月日はkintoneの修了証発行に必要です。研修終了後・修了証発行前に登録してください。</div>
+      <a class="modal-btn" style="background:#0e6655" href="kintone-upload.html" target="_blank">
+        👤 CSVアップローダーを開く
+      </a>
+    </div>
+  </div>
 
   <!-- 振替フォームを開く -->
   <div id="m-transfer-form" style="display:none">
