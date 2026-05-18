@@ -565,6 +565,18 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
     </div>
 
     <div class="section">
+      <div class="section-title" style="background:#4a235a">年次提出書類</div>
+      <a class="item" onclick="openModal('graduates-list')">
+        <div class="item-icon purple">📑</div>
+        <div class="item-text">修了者名簿を生成する（大阪府提出用）
+          <div class="item-sub">様式第12号・前年度分を自動作成してメール送付</div>
+        </div>
+        <span class="item-badge" style="background:#e8daef;color:#4a235a">年1回</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
       <div class="section-title gray">スプレッドシート</div>
       <a class="item" onclick="openModal('sheet-open')">
         <div class="item-icon green">📊</div>
@@ -1056,6 +1068,48 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       <a class="modal-btn gray" href="https://console.cloud.google.com/iam-admin/serviceaccounts?project=koudouengo" target="_blank">
         🔑 Google Cloud Consoleを開く
       </a>
+    </div>
+  </div>
+
+  <!-- 修了者名簿生成 -->
+  <div id="m-graduates-list" style="display:none">
+    <div class="modal-header" style="background:#4a235a">
+      <span style="font-size:1.3rem">📑</span>
+      <h3>修了者名簿を生成する（大阪府提出用）</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>大阪府への年次提出用「修了者名簿（様式第12号）」を生成します。<br>
+      生成後、<strong>staff@e-bestway.net</strong> にExcelファイルが届きます。</p>
+
+      <div class="modal-tip" style="margin-bottom:14px">
+        💡 <strong>毎年5月1日に自動実行</strong>されます。<br>
+        それ以外のタイミングで必要な場合は下のボタンで手動実行できます。
+      </div>
+
+      <ol class="modal-steps">
+        <li>下の「今すぐ生成」ボタンをクリック</li>
+        <li>2〜3分後に <strong>staff@e-bestway.net</strong> にExcelが届く</li>
+        <li>所在地（番地）・法人名を確認・修正する</li>
+        <li>大阪府に提出する</li>
+      </ol>
+
+      <div class="modal-warn" style="margin-top:10px">
+        ⚠ 自動入力できない項目：<br>
+        ・<strong>所在地</strong>：都道府県のみ。番地まで補完してください。<br>
+        ・<strong>法人名</strong>：事業所名を流用。正式な法人名に修正してください。<br>
+        ・<strong>生年月日</strong>：kintoneに登録済みの場合のみ入力されます。
+      </div>
+
+      <div id="graduates-result" style="display:none;margin-top:12px;padding:10px 14px;
+        border-radius:7px;font-size:.85rem;line-height:1.6"></div>
+
+      <button id="graduates-run-btn" onclick="runGraduatesWorkflow()"
+        style="display:block;width:100%;margin-top:16px;padding:12px;
+          background:#4a235a;color:#fff;border:none;border-radius:7px;
+          font-size:.95rem;font-weight:700;cursor:pointer">
+        📑 今すぐ修了者名簿を生成する
+      </button>
     </div>
   </div>
 
@@ -2306,6 +2360,51 @@ async function triggerApplicantsWorkflow(){
       alert('実行失敗: HTTP ' + res.status);
     }
   } catch(e){ alert('エラー: ' + e.message); }
+}
+
+async function runGraduatesWorkflow(){
+  const token = localStorage.getItem('gh_token') || '';
+  if(!token){
+    alert('GitHubトークンを設定してください。\nヘッダーの「未ログイン」ボタンからトークンを入力してください。');
+    return;
+  }
+  const btn = document.getElementById('graduates-run-btn');
+  const res_el = document.getElementById('graduates-result');
+  btn.textContent = '⏳ 実行中…';
+  btn.disabled = true;
+  btn.style.opacity = '.6';
+
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/actions/workflows/graduates-list.yml/dispatches`,
+      { method:'POST',
+        headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json',
+                  'Content-Type':'application/json' },
+        body: JSON.stringify({ ref:'main' }) }
+    );
+    if(res.status === 204){
+      res_el.style.cssText = 'display:block;background:#d5f5e3;border:1px solid #82e0aa;' +
+        'border-radius:7px;padding:10px 14px;font-size:.85rem;color:#1e8449;margin-top:12px';
+      res_el.innerHTML = '✅ <strong>ワークフローを開始しました！</strong><br>' +
+        '2〜3分後に <strong>staff@e-bestway.net</strong> にExcelが届きます。<br>' +
+        '<small style="color:#888">※ 届かない場合はGitHub Actionsのログを確認してください。</small>';
+    } else {
+      const body = await res.json().catch(()=>({}));
+      res_el.style.cssText = 'display:block;background:#fde8e8;border:1px solid #f5a6a6;' +
+        'border-radius:7px;padding:10px 14px;font-size:.85rem;color:#c0392b;margin-top:12px';
+      res_el.innerHTML = '❌ 実行に失敗しました<br>' +
+        '<small>' + (body.message || 'HTTP ' + res.status) + '</small><br>' +
+        '<small>トークンに <code>workflow</code> スコープが必要です。</small>';
+    }
+  } catch(e) {
+    res_el.style.cssText = 'display:block;background:#fde8e8;border:1px solid #f5a6a6;' +
+      'border-radius:7px;padding:10px 14px;font-size:.85rem;color:#c0392b;margin-top:12px';
+    res_el.textContent = '❌ 通信エラー: ' + e.message;
+  }
+
+  btn.textContent = '📑 今すぐ修了者名簿を生成する';
+  btn.disabled = false;
+  btn.style.opacity = '1';
 }
 
 async function triggerIncompleteWorkflow(){
