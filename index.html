@@ -424,11 +424,10 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <small>※ 入力するとこのブラウザに保存されます。<a href="https://github.com/settings/tokens/new?scopes=workflow&description=送信用" target="_blank" style="color:#1a5276">トークンを作成</a>（workflow スコープのみ必要）</small>
       </div>
 
-      <!-- コース選択 -->
-      <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">① 送るコースを選ぶ</div>
-      <select class="course-select" id="teacher-course-sel">
-        <option value="">── コースを読み込み中… ──</option>
-      </select>
+      <!-- コース入力 -->
+      <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">① 送るコースを入力（スプレッドシートのコース名をそのままコピー）</div>
+      <input type="text" id="teacher-course-sel" class="course-select"
+             placeholder="例: 5月20日27日(水)" autocomplete="off">
 
       <!-- 先生チェックリスト -->
       <div style="margin-bottom:8px;font-size:.82rem;font-weight:600;color:#555">② 送る先生にチェック</div>
@@ -854,27 +853,6 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 const GH_REPO  = 'bestwaycare/koudouengo-attendance';
 const GH_WF    = 'send-teachers.yml';
 
-// コース一覧をGASから取得してselectに展開
-const GAS_URL  = 'https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec';
-
-function loadCoursesForTeacher(){
-  const sel = document.getElementById('teacher-course-sel');
-  if(!sel) return;
-  fetch(GAS_URL + '?action=getAllDates')
-    .then(r => r.json())
-    .then(data => {
-      const courses = [...new Set((data||[]).map(d => d.course))];
-      sel.innerHTML = '<option value="">── コースを選択 ──</option>';
-      courses.forEach(c => {
-        sel.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`);
-      });
-    })
-    .catch(() => {
-      // GASから取れない場合は手入力モードに
-      sel.outerHTML = '<input id="teacher-course-sel" class="course-select" placeholder="コース名を入力（例: 5月20日27日(水)）">';
-    });
-}
-
 function toggleCheck(id){
   const cb = document.getElementById(id);
   if(cb) cb.checked = !cb.checked;
@@ -972,6 +950,7 @@ function openModal(id){
   const m = document.getElementById('m-' + id);
   if(m){ m.style.display='block'; }
   document.getElementById('overlay').classList.add('show');
+  if(id === 'send-teachers') loadToken();
 }
 
 function closeModal(e){
