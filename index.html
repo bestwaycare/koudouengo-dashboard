@@ -161,6 +161,43 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
   .status-bar{margin:0 10px 14px;gap:10px}
 }
 
+/* ── 未修了者モーダル ── */
+.incomplete-modal{background:#fff;border-radius:12px;width:100%;max-width:820px;
+  max-height:88vh;display:flex;flex-direction:column;
+  box-shadow:0 8px 32px rgba(0,0,0,.25);overflow:hidden}
+.incomplete-hd{background:linear-gradient(135deg,#922b21,#c0392b);
+  color:#fff;padding:15px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.incomplete-hd h3{font-size:1rem;flex:1;margin:0}
+.incomplete-toolbar{padding:12px 16px;background:#f8f9fa;border-bottom:1px solid #eee;
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.incomplete-toolbar input{flex:1;min-width:160px;padding:7px 10px;border:1.5px solid #ddd;
+  border-radius:6px;font-size:.85rem;font-family:inherit}
+.incomplete-toolbar input:focus{outline:none;border-color:#922b21}
+.incomplete-toolbar select{padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;
+  font-size:.85rem;font-family:inherit;background:#fff}
+.incomplete-body{flex:1;overflow-y:auto;padding:0}
+.incomplete-stats{display:flex;gap:12px;padding:12px 16px;background:#fff3f3;
+  border-bottom:1px solid #fcc;flex-wrap:wrap;flex-shrink:0}
+.istat{background:#fff;border:1px solid #f5b7b1;border-radius:6px;
+  padding:8px 14px;font-size:.82rem;text-align:center;min-width:80px}
+.istat-num{font-size:1.4rem;font-weight:700;color:#c0392b;line-height:1.1}
+.istat-label{color:#888;font-size:.72rem;margin-top:2px}
+.incomplete-table{width:100%;border-collapse:collapse;font-size:.83rem}
+.incomplete-table th{background:#922b21;color:#fff;padding:9px 12px;
+  text-align:left;font-weight:600;font-size:.78rem;white-space:nowrap;
+  position:sticky;top:0;z-index:1}
+.incomplete-table td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.incomplete-table tr:hover td{background:#fff5f5}
+.incomplete-table tr:last-child td{border-bottom:none}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:.72rem;font-weight:700}
+.status-mikan{background:#fdebd0;color:#a04000}
+.status-other{background:#eee;color:#555}
+.incomplete-empty{text-align:center;padding:40px;color:#aaa;font-size:.9rem}
+.incomplete-loading{text-align:center;padding:30px;color:#888;font-size:.9rem}
+.incomplete-updated{font-size:.72rem;color:#aaa;padding:8px 16px;text-align:right;
+  border-top:1px solid #eee}
+
 /* ── ベルボタン ── */
 .bell-btn{position:relative;background:rgba(255,255,255,.18);border:none;
   color:#fff;font-size:1.25rem;padding:7px 10px;border-radius:8px;
@@ -343,6 +380,14 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
           <div class="item-sub">受講者・修了者情報を確認</div>
         </div>
         <span class="item-badge badge-ext">外部</span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" onclick="openIncomplete()">
+        <div class="item-icon red">📋</div>
+        <div class="item-text">未修了者一覧を見る
+          <div class="item-sub">修了証未発行の受講者をコース別に確認</div>
+        </div>
+        <span class="item-badge" style="background:#fdebd0;color:#922b21">要確認</span>
         <span class="arrow">›</span>
       </a>
     </div>
@@ -928,6 +973,37 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 </div><!-- /modal -->
 </div><!-- /overlay -->
 
+<!-- 未修了者モーダル -->
+<div class="remind-overlay" id="incomplete-overlay" onclick="closeIncomplete(event)">
+  <div class="incomplete-modal" onclick="event.stopPropagation()">
+    <div class="incomplete-hd">
+      <span style="font-size:1.3rem">📋</span>
+      <h3>未修了者一覧</h3>
+      <button style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer"
+              onclick="closeIncomplete()">✕</button>
+    </div>
+    <div class="incomplete-stats" id="incomplete-stats">
+      <div class="istat"><div class="istat-num" id="istat-total">－</div><div class="istat-label">未修了者 合計</div></div>
+      <div class="istat"><div class="istat-num" id="istat-courses">－</div><div class="istat-label">対象コース数</div></div>
+      <div class="istat"><div class="istat-num" id="istat-updated">－</div><div class="istat-label">データ更新日時</div></div>
+    </div>
+    <div class="incomplete-toolbar">
+      <input type="text" id="incomplete-search" placeholder="🔍 氏名・フリガナ・事業所で検索…" oninput="filterIncomplete()">
+      <select id="incomplete-course-filter" onchange="filterIncomplete()">
+        <option value="">すべてのコース</option>
+      </select>
+      <button onclick="reloadIncomplete()" style="padding:7px 14px;background:#922b21;color:#fff;
+        border:none;border-radius:6px;font-size:.83rem;font-weight:600;cursor:pointer;white-space:nowrap">
+        🔄 更新
+      </button>
+    </div>
+    <div class="incomplete-body">
+      <div id="incomplete-table-area" class="incomplete-loading">⏳ 読み込み中…</div>
+    </div>
+    <div class="incomplete-updated" id="incomplete-updated"></div>
+  </div>
+</div>
+
 <!-- リマインダーポップアップ -->
 <div class="remind-overlay" id="remind-overlay">
   <div class="remind-popup">
@@ -1385,6 +1461,160 @@ function showProgressTab(tab){
 // ── 起動処理 ──
 checkAutoPopup();
 loadProgressPanel();
+
+// ══════════════════════════════════════════
+//  📋 未修了者一覧
+// ══════════════════════════════════════════
+let incompleteData = null;
+
+async function openIncomplete(){
+  document.getElementById('incomplete-overlay').classList.add('show');
+  if(!incompleteData) await reloadIncomplete();
+}
+
+function closeIncomplete(e){
+  if(e && e.target !== document.getElementById('incomplete-overlay')) return;
+  document.getElementById('incomplete-overlay').classList.remove('show');
+}
+
+async function reloadIncomplete(){
+  const area = document.getElementById('incomplete-table-area');
+  area.className = 'incomplete-loading';
+  area.textContent = '⏳ kintone から最新データを読み込み中…';
+  document.getElementById('istat-total').textContent = '－';
+  document.getElementById('istat-courses').textContent = '－';
+  document.getElementById('istat-updated').textContent = '－';
+
+  const token = localStorage.getItem('gh_token') || '';
+  if(!token){
+    area.className = 'incomplete-loading';
+    area.innerHTML = '🔑 GitHub トークンを設定してください。<br><small>「先生へ出席簿を送る」モーダルでトークンを入力・保存してください。</small>';
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/' + GH_REPO + '/contents/incomplete.json',
+      { headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github.v3.raw' } }
+    );
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    if(!data.students || data.students.length === 0){
+      incompleteData = data;
+      area.className = 'incomplete-loading';
+      area.innerHTML = '✅ 未修了者はいません！';
+      document.getElementById('istat-total').textContent = '0';
+      document.getElementById('istat-courses').textContent = '0';
+      updateIncompleteTimestamp(data.generated);
+      return;
+    }
+
+    incompleteData = data;
+
+    // コースフィルターを構築
+    const courseFilter = document.getElementById('incomplete-course-filter');
+    const courses = Object.keys(data.courses || {}).sort();
+    courseFilter.innerHTML = '<option value="">すべてのコース</option>' +
+      courses.map(c => `<option value="${c}">${c}（${data.courses[c]}名）</option>`).join('');
+
+    document.getElementById('istat-total').textContent = data.total;
+    document.getElementById('istat-courses').textContent = courses.length;
+    updateIncompleteTimestamp(data.generated);
+    renderIncompleteTable(data.students);
+
+  } catch(e) {
+    area.className = 'incomplete-loading';
+    area.innerHTML = '❌ データの取得に失敗しました<br><small>' + e.message + '</small><br><br>' +
+      '<button onclick="triggerIncompleteWorkflow()" style="padding:8px 16px;background:#922b21;' +
+      'color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85rem">🔄 ワークフローを実行して生成</button>';
+  }
+}
+
+function updateIncompleteTimestamp(iso){
+  const el = document.getElementById('incomplete-updated');
+  const elStat = document.getElementById('istat-updated');
+  if(!iso){ el.textContent = ''; elStat.textContent = '－'; return; }
+  const d = new Date(iso);
+  const str = d.toLocaleDateString('ja-JP',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  el.textContent = '最終更新: ' + str;
+  elStat.textContent = str;
+}
+
+function filterIncomplete(){
+  if(!incompleteData) return;
+  const q      = document.getElementById('incomplete-search').value.trim().toLowerCase();
+  const course = document.getElementById('incomplete-course-filter').value;
+  let filtered = incompleteData.students;
+  if(course) filtered = filtered.filter(s => s.course === course);
+  if(q)      filtered = filtered.filter(s =>
+    [s.name, s.furigana, s.company, s.course].join(' ').toLowerCase().includes(q));
+  renderIncompleteTable(filtered);
+}
+
+function renderIncompleteTable(students){
+  const area = document.getElementById('incomplete-table-area');
+  if(!students.length){
+    area.className = 'incomplete-loading';
+    area.textContent = '該当者はいません';
+    return;
+  }
+
+  // コースごとにグループ化
+  const grouped = {};
+  students.forEach(s => {
+    const c = s.course || '（コース不明）';
+    if(!grouped[c]) grouped[c] = [];
+    grouped[c].push(s);
+  });
+
+  let html = '<table class="incomplete-table"><thead><tr>' +
+    '<th style="width:36px">No.</th>' +
+    '<th>氏名</th><th>フリガナ</th><th>事業所</th>' +
+    '<th>コース名</th><th style="width:60px">状態</th>' +
+    '</tr></thead><tbody>';
+
+  let no = 1;
+  Object.keys(grouped).sort().forEach(course => {
+    grouped[course].forEach(s => {
+      const badge = s.status === '未' || !s.status
+        ? `<span class="status-badge status-mikan">未発行</span>`
+        : `<span class="status-badge status-other">${s.status}</span>`;
+      html += `<tr>
+        <td style="text-align:center;color:#aaa;font-size:.75rem">${no++}</td>
+        <td><strong>${s.name || '─'}</strong></td>
+        <td style="font-size:.8rem;color:#666">${s.furigana || '─'}</td>
+        <td style="font-size:.8rem;color:#666">${s.company || '─'}</td>
+        <td style="font-size:.8rem">${s.course || '─'}</td>
+        <td>${badge}</td>
+      </tr>`;
+    });
+  });
+
+  html += '</tbody></table>';
+  area.className = '';
+  area.innerHTML = html;
+}
+
+async function triggerIncompleteWorkflow(){
+  const token = localStorage.getItem('gh_token') || '';
+  if(!token){ alert('GitHubトークンを設定してください'); return; }
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/actions/workflows/incomplete.yml/dispatches`,
+      { method:'POST',
+        headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json',
+                  'Content-Type':'application/json' },
+        body: JSON.stringify({ ref:'main' }) }
+    );
+    if(res.status === 204){
+      document.getElementById('incomplete-table-area').innerHTML =
+        '✅ ワークフローを開始しました。2〜3分後に「🔄 更新」ボタンを押してください。';
+    } else {
+      alert('実行失敗: HTTP ' + res.status);
+    }
+  } catch(e){ alert('エラー: ' + e.message); }
+}
 </script>
 </body>
 </html>
