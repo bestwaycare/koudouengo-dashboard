@@ -1183,6 +1183,7 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
     <!-- フッター -->
     <div class="applicants-footer">
       <span class="applicants-footer-info" id="app-footer-info"></span>
+      <span id="app-save-indicator" style="font-size:.78rem;margin-left:10px"></span>
       <button class="app-csv-btn" onclick="exportApplicantsCSV()">📥 CSVダウンロード</button>
     </div>
   </div>
@@ -1924,17 +1925,106 @@ function renderIncompleteTable(students){
 //  👥 申込者一覧
 // ══════════════════════════════════════════
 let applicantsData = null;
+let appMetaSaveTimer = null;
 
+// ── メタデータ（封筒・グループ）は GitHub ファイルを正として扱う ──
 function getAppMeta(){
   return JSON.parse(localStorage.getItem('applicantsMeta') || '{}');
 }
-function saveAppMeta(m){
+// ローカルに書いて UI を即時更新 → GitHub への保存はデバウンスで遅延
+function saveAppMetaLocal(m){
   localStorage.setItem('applicantsMeta', JSON.stringify(m));
+  scheduleSaveAppMeta();
+}
+
+// GitHub から applicants_meta.json を取得して localStorage に上書き
+async function loadAppMetaFromGitHub(){
+  const token = localStorage.getItem('gh_token') || '';
+  if(!token) return;
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/' + GH_REPO + '/contents/applicants_meta.json',
+      { headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github.v3.raw' } }
+    );
+    if(res.ok){
+      const meta = await res.json();
+      localStorage.setItem('applicantsMeta', JSON.stringify(meta));
+    }
+  } catch(e){}
+}
+
+// 1.5 秒待ってから GitHub に書き込む（連続変更時はタイマーリセット）
+function scheduleSaveAppMeta(){
+  clearTimeout(appMetaSaveTimer);
+  updateAppSaveIndicator('pending');
+  appMetaSaveTimer = setTimeout(pushAppMetaToGitHub, 1500);
+}
+
+async function pushAppMetaToGitHub(){
+  const token = localStorage.getItem('gh_token') || '';
+  if(!token){ updateAppSaveIndicator('error'); return; }
+  updateAppSaveIndicator('saving');
+  try {
+    const meta = getAppMeta();
+    // JSON → Uint8Array → binary string → base64（日本語対応）
+    const jsonStr  = JSON.stringify(meta, null, 2);
+    const bytes    = new TextEncoder().encode(jsonStr);
+    const binStr   = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
+    const content  = btoa(binStr);
+
+    // 現在の SHA を取得（更新に必要）
+    const shaRes   = await fetch(
+      'https://api.github.com/repos/' + GH_REPO + '/contents/applicants_meta.json',
+      { headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json' } }
+    );
+    const body = { message:'申込者 封筒・グループを更新', content };
+    if(shaRes.ok){ body.sha = (await shaRes.json()).sha; }
+
+    const putRes = await fetch(
+      'https://api.github.com/repos/' + GH_REPO + '/contents/applicants_meta.json',
+      { method:'PUT',
+        headers:{ 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json',
+                  'Content-Type':'application/json' },
+        body: JSON.stringify(body) }
+    );
+    if(putRes.ok){
+      updateAppSaveIndicator('saved');
+    } else if(putRes.status === 409){
+      // 他のPCが先に更新していた場合 → GItHub 側を再取得して上書き
+      updateAppSaveIndicator('conflict');
+    } else {
+      updateAppSaveIndicator('error');
+    }
+  } catch(e){ updateAppSaveIndicator('error'); }
+}
+
+function updateAppSaveIndicator(status){
+  const el = document.getElementById('app-save-indicator');
+  if(!el) return;
+  const map = {
+    pending:  '⏳ 保存待機中…',
+    saving:   '⏳ GitHubに保存中…',
+    saved:    '✅ 全PC共有済み',
+    error:    '❌ 保存エラー（トークンを確認）',
+    conflict: '⚠️ 他のPCで変更あり。「🔄 更新」を押してください',
+  };
+  el.textContent = map[status] || '';
+  el.style.color = status === 'saved'    ? '#1e8449'
+                 : status === 'pending' || status === 'saving' ? '#888'
+                 : '#c0392b';
+  // saved は3秒後に消す
+  if(status === 'saved') setTimeout(() => { if(el.textContent.includes('共有')) el.textContent=''; }, 3000);
 }
 
 async function openApplicants(){
   document.getElementById('applicants-overlay').classList.add('show');
-  if(!applicantsData) await reloadApplicants();
+  // GitHub から最新メタデータを読み込む（封筒・グループを最新化）
+  await loadAppMetaFromGitHub();
+  if(!applicantsData){
+    await reloadApplicants();
+  } else {
+    renderApplicantsCourse(); // メタデータ更新後に再描画
+  }
 }
 
 function closeApplicants(e){
@@ -2097,7 +2187,7 @@ function setApplicantEnv(sel){
   const meta = getAppMeta();
   if(!meta[id]) meta[id] = {};
   meta[id].envelope = val;
-  saveAppMeta(meta);
+  saveAppMetaLocal(meta);
   sel.className = 'env-sel' + (val==='A'?' env-a':val==='B'?' env-b':'');
 }
 
@@ -2107,7 +2197,7 @@ function setApplicantGroup(inp){
   const meta = getAppMeta();
   if(!meta[id]) meta[id] = {};
   meta[id].group = val;
-  saveAppMeta(meta);
+  saveAppMetaLocal(meta);
 }
 
 function toggleAppRowHighlight(id, checked){
@@ -2153,7 +2243,7 @@ function bulkApplyMeta(){
     // ハイライト解除
     toggleAppRowHighlight(id, false);
   });
-  saveAppMeta(meta);
+  saveAppMetaLocal(meta);
 
   // チェック・入力欄をリセット
   document.querySelectorAll('.app-row-chk').forEach(cb => cb.checked = false);
