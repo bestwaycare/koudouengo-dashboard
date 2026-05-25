@@ -843,18 +843,22 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p>通常は研修3日前に自動生成されますが、緊急時は手動で実行できます。</p>
-      <ol class="modal-steps">
-        <li>GitHubにログイン（bestwaycare）</li>
-        <li>「koudouengo-attendance」リポジトリを開く</li>
-        <li>「Actions」タブをクリック</li>
-        <li>「行動援護 出席簿・修了証 自動処理」をクリック</li>
-        <li>「Run workflow」→「Run workflow」で手動実行</li>
-        <li>数分後にメールでPDFが届く</li>
-      </ol>
-      <a class="modal-btn gray" href="https://github.com/bestwaycare/koudouengo-attendance/actions" target="_blank">
-        ⚙️ GitHub Actionsを開く
-      </a>
+      <p>生成したいコースの<strong>初日の日付</strong>を入力してください。<br>
+         時期に関係なく、いつでも生成できます。</p>
+      <div style="margin:14px 0">
+        <label style="font-weight:600;font-size:.88rem;display:block;margin-bottom:5px">
+          研修初日の日付<span style="color:#e74c3c">*</span>
+        </label>
+        <input id="pdf-manual-date" type="text" placeholder="例: 5/9　または　6/13"
+               style="width:100%;padding:9px 12px;border:1.5px solid #ccc;border-radius:6px;
+                      font-size:.95rem;font-family:inherit">
+        <div style="font-size:.78rem;color:#888;margin-top:4px">スプレッドシートのコース名に含まれる月/日を入力</div>
+      </div>
+      <div id="pdf-manual-result" style="min-height:1.4em;font-size:.88rem"></div>
+      <button class="modal-btn orange" onclick="triggerAttendanceWorkflow('manual')" style="margin-top:10px;width:100%">
+        📄 出席簿を生成する
+      </button>
+      <div class="modal-tip" style="margin-top:12px">💡 生成後、数分で staff@e-bestway.net にメールが届きます。</div>
     </div>
   </div>
 
@@ -1028,22 +1032,25 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
   <div id="m-pdf-check" style="display:none">
     <div class="modal-header orange">
       <span style="font-size:1.3rem">✉️</span>
-      <h3>出席簿PDFを再送してもらう</h3>
+      <h3>出席簿PDFを再送する</h3>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p>メールが届かなかった場合、GitHub Actionsを手動実行して再送できます。</p>
-      <ol class="modal-steps">
-        <li>GitHubにログイン（bestwaycare）</li>
-        <li>「koudouengo-attendance」→「Actions」を開く</li>
-        <li>「Run workflow」ボタンをクリック</li>
-        <li>「Run workflow」で実行</li>
-        <li>数分後に staff@e-bestway.net にメールが届く</li>
-      </ol>
-      <div class="modal-tip">💡 3日後に研修がある場合のみ出席簿が生成されます。</div>
-      <a class="modal-btn gray" href="https://github.com/bestwaycare/koudouengo-attendance/actions" target="_blank">
-        ⚙️ GitHub Actionsを開く
-      </a>
+      <p>メールが届かなかった場合、再送できます。<br>
+         再送したいコースの初日を入力してください。</p>
+      <div style="margin:14px 0">
+        <label style="font-weight:600;font-size:.88rem;display:block;margin-bottom:5px">
+          研修初日の日付<span style="color:#e74c3c">*</span>
+        </label>
+        <input id="pdf-check-date" type="text" placeholder="例: 5/9　または　6/13"
+               style="width:100%;padding:9px 12px;border:1.5px solid #ccc;border-radius:6px;
+                      font-size:.95rem;font-family:inherit">
+      </div>
+      <div id="pdf-check-result" style="min-height:1.4em;font-size:.88rem"></div>
+      <button class="modal-btn orange" onclick="triggerAttendanceWorkflow('check')" style="margin-top:10px;width:100%">
+        ✉️ 再送する
+      </button>
+      <div class="modal-tip" style="margin-top:12px">💡 数分で staff@e-bestway.net にメールが届きます。</div>
     </div>
   </div>
 
@@ -2425,6 +2432,52 @@ async function triggerIncompleteWorkflow(){
       alert('実行失敗: HTTP ' + res.status);
     }
   } catch(e){ alert('エラー: ' + e.message); }
+}
+
+async function triggerAttendanceWorkflow(mode) {
+  const dateId   = mode === 'check' ? 'pdf-check-date'   : 'pdf-manual-date';
+  const resultId = mode === 'check' ? 'pdf-check-result' : 'pdf-manual-result';
+  const resultEl = document.getElementById(resultId);
+
+  const token = localStorage.getItem('gh_token') || '';
+  if (!token) {
+    resultEl.innerHTML = '<span style="color:#c0392b">⚠ ログインが必要です。ヘッダーの「未ログイン」ボタンからトークンを入力してください。</span>';
+    return;
+  }
+
+  const date = (document.getElementById(dateId)?.value || '').trim();
+  if (!date) {
+    resultEl.innerHTML = '<span style="color:#c0392b">⚠ 研修初日の日付を入力してください（例: 5/9）。</span>';
+    return;
+  }
+
+  resultEl.innerHTML = '⏳ GitHub Actions を起動中…';
+
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/actions/workflows/daily.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ref: 'main', inputs: { target_date: date } })
+      }
+    );
+    if (res.status === 204) {
+      resultEl.innerHTML =
+        `<span style="color:#1e8449">✅ ${date} の出席簿生成を開始しました。数分で staff@e-bestway.net にメールが届きます。</span>`;
+      document.getElementById(dateId).value = '';
+    } else {
+      const err = await res.json().catch(() => ({}));
+      resultEl.innerHTML =
+        `<span style="color:#c0392b">❌ エラー (HTTP ${res.status}): ${err.message || '不明なエラー'}</span>`;
+    }
+  } catch(e) {
+    resultEl.innerHTML = `<span style="color:#c0392b">❌ 通信エラー: ${e.message}</span>`;
+  }
 }
 </script>
 </body>
