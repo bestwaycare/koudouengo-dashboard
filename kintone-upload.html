@@ -358,10 +358,7 @@
       <label>APIトークン</label>
       <input type="password" id="apiToken" value="84Y7rrXblPd7oxkZ8DWYdtj99AZcUAPyBs9NNLJO" />
     </div>
-    <div class="field">
-      <label>GAS WebアプリURL（行動援護シート取得用）</label>
-      <input type="text" id="gasUrl" value="https://script.google.com/macros/s/AKfycbxKw0V1Z4-iBZ66pNo9IVUgp0vSba9b6EgwCag2yUkPh52naoVRYhMED2Vbf1vF_Ejk/exec" />
-    </div>
+
   </div>
 
   <!-- タブ切替 -->
@@ -379,22 +376,17 @@
   <!-- 行動援護タブ -->
   <div id="tab-koudo" class="tab-content active">
     <div class="card">
-      <div class="card-title">行動援護シート</div>
+      <div class="card-title">行動援護シート CSV（UTF-8）</div>
       <p style="color:var(--text-muted);font-size:12px;margin-bottom:16px">
-        GoogleスプレッドシートIDを入力して「データ取得」を押してください。<br>
-        キー：注文ID　／　GAS経由でスプレッドシートを直接読み込みます
+        Googleスプレッドシートを <strong>ファイル → ダウンロード → CSVファイル（.csv）</strong> でエクスポートしてください。<br>
+        キー：注文ID　／　エンコード：UTF-8（Googleスプレッドシートの標準）
       </p>
-      <div class="field">
-        <label>スプレッドシートID</label>
-        <input type="text" id="sheetId" value="1SP0afEBrGj19w6OvODOpqSohVn3kxpp6E6_-0w4stDI" />
+      <div class="drop-zone" id="dz-koudo">
+        <input type="file" accept=".csv" id="file-koudo" onchange="loadFile('koudo')">
+        <div class="icon">📂</div>
+        <p>クリックまたはドロップしてCSVを選択</p>
+        <div class="filename" id="fname-koudo"></div>
       </div>
-      <div class="field">
-        <label>シート名</label>
-        <input type="text" id="sheetName" value="行動援護" />
-      </div>
-      <button class="btn btn-primary" id="btn-fetch" onclick="fetchSheetData()" style="margin-bottom:16px">
-        🔄 スプレッドシートからデータ取得
-      </button>
       <div id="preview-koudo"></div>
     </div>
     <button class="btn btn-primary" id="btn-koudo" disabled onclick="startUpload('koudo')" style="background:linear-gradient(135deg,#34d399,#059669)">
@@ -466,77 +458,23 @@ function switchTab(name) {
 // ===================================================
 // スプレッドシートからデータ取得（GAS経由）
 // ===================================================
-function fetchSheetData() {
-  var gasUrl   = document.getElementById('gasUrl').value.trim();
-  var sheetId  = document.getElementById('sheetId').value.trim();
-  var sheetName= document.getElementById('sheetName').value.trim();
-  var btn      = document.getElementById('btn-fetch');
-
-  if (!gasUrl || !sheetId) {
-    alert('GAS URLとスプレッドシートIDを入力してください');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = '⏳ 取得中...';
-
-  var url = gasUrl + '?action=getSheetData&sheetId=' + encodeURIComponent(sheetId) + '&sheetName=' + encodeURIComponent(sheetName);
-
-  fetch(url)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.error) {
-        alert('エラー: ' + data.error);
-        btn.disabled = false;
-        btn.textContent = '🔄 スプレッドシートからデータ取得';
-        return;
-      }
-
-      // マッピング
-      parsedData.koudo = data.rows.map(function(r) {
-        var orderId = (r['注文ID'] || '').trim();
-        if (!orderId) return null;
-        return {
-          _key    : orderId,
-          注文ID  : orderId,
-          コース名: (r['コース'] || '').trim(),
-          姓      : (r['受講者：姓'] || '').trim(),
-          名      : (r['受講者：名'] || '').trim(),
-          フリガナ: (r['フリガナ'] || '').trim(),
-          メールアドレス   : (r['メールアドレス'] || '').trim(),
-          電話番号         : (r['電話番号'] || '').trim(),
-          送付先郵便番号   : (r['送付先郵便番号'] || '').trim(),
-          送付先都道府県   : (r['送付先都道府県'] || '').trim(),
-          送付先住所       : (r['送付先住所'] || '').trim(),
-          送付先事業所名   : (r['送付先事業所名（個人宅送付以外必須）'] || '').trim(),
-          備考             : (r['備考'] || '').trim()
-        };
-      }).filter(Boolean);
-
-      showPreview('koudo');
-      document.getElementById('btn-koudo').disabled = false;
-      btn.disabled = false;
-      btn.textContent = '✅ ' + parsedData.koudo.length + ' 件取得済み';
-    })
-    .catch(function(err) {
-      alert('取得エラー: ' + err.message);
-      btn.disabled = false;
-      btn.textContent = '🔄 スプレッドシートからデータ取得';
-    });
-}
+// fetchSheetData は CSV ドロップ方式に変更（GAS CORS問題を解消）
 
 // ===================================================
 // ドラッグ＆ドロップ
 // ===================================================
-// userdetailのみドロップゾーン設定
-var dzUd = document.getElementById('dz-userdetail');
-dzUd.addEventListener('dragover', function(e) { e.preventDefault(); dzUd.classList.add('dragover'); });
-dzUd.addEventListener('dragleave', function() { dzUd.classList.remove('dragover'); });
-dzUd.addEventListener('drop', function(e) {
-  e.preventDefault();
-  dzUd.classList.remove('dragover');
-  var file = e.dataTransfer.files[0];
-  if (file) processFile('userdetail', file);
+// ドロップゾーン設定（koudo / userdetail 共通）
+['koudo', 'userdetail'].forEach(function(name) {
+  var dz = document.getElementById('dz-' + name);
+  if (!dz) return;
+  dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', function() { dz.classList.remove('dragover'); });
+  dz.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    var file = e.dataTransfer.files[0];
+    if (file) processFile(name, file);
+  });
 });
 
 // ===================================================
@@ -560,8 +498,12 @@ function processFile(name, file) {
     };
     reader.readAsArrayBuffer(file);
   } else {
+    // UTF-8（Googleスプレッドシートエクスポート）/ BOM付きUTF-8も自動除去
     var reader = new FileReader();
-    reader.onload = function(e) { parseCSV(name, e.target.result); };
+    reader.onload = function(e) {
+      var text = e.target.result.replace(/^﻿/, ''); // BOM除去
+      parseCSV(name, text);
+    };
     reader.readAsText(file, 'UTF-8');
   }
 }
