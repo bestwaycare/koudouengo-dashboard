@@ -358,6 +358,10 @@
       <label>APIトークン</label>
       <input type="password" id="apiToken" value="84Y7rrXblPd7oxkZ8DWYdtj99AZcUAPyBs9NNLJO" />
     </div>
+    <div class="field">
+      <label>GAS WebアプリURL</label>
+      <input type="text" id="gasUrl" value="https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec" />
+    </div>
 
   </div>
 
@@ -376,17 +380,19 @@
   <!-- 行動援護タブ -->
   <div id="tab-koudo" class="tab-content active">
     <div class="card">
-      <div class="card-title">行動援護シート CSV（UTF-8）</div>
+      <div class="card-title">行動援護シート</div>
       <p style="color:var(--text-muted);font-size:12px;margin-bottom:16px">
-        Googleスプレッドシートを <strong>ファイル → ダウンロード → CSVファイル（.csv）</strong> でエクスポートしてください。<br>
-        キー：注文ID　／　エンコード：UTF-8（Googleスプレッドシートの標準）
+        シート名を確認して「データ取得」を押してください。<br>
+        キー：注文ID　／　GAS経由でスプレッドシートを直接読み込みます
       </p>
-      <div class="drop-zone" id="dz-koudo">
-        <input type="file" accept=".csv" id="file-koudo" onchange="loadFile('koudo')">
-        <div class="icon">📂</div>
-        <p>クリックまたはドロップしてCSVを選択</p>
-        <div class="filename" id="fname-koudo"></div>
+      <div class="field">
+        <label>シート名</label>
+        <input type="text" id="sheetName" value="行動援護" />
       </div>
+      <button class="btn btn-primary" id="btn-fetch" onclick="fetchSheetData()" style="margin-bottom:16px">
+        🔄 スプレッドシートからデータ取得
+      </button>
+      <div id="fetch-result" style="font-size:.82rem;margin-bottom:8px"></div>
       <div id="preview-koudo"></div>
     </div>
     <button class="btn btn-primary" id="btn-koudo" disabled onclick="startUpload('koudo')" style="background:linear-gradient(135deg,#34d399,#059669)">
@@ -458,23 +464,77 @@ function switchTab(name) {
 // ===================================================
 // スプレッドシートからデータ取得（GAS経由）
 // ===================================================
-// fetchSheetData は CSV ドロップ方式に変更（GAS CORS問題を解消）
+function fetchSheetData() {
+  var gasUrl    = document.getElementById('gasUrl').value.trim();
+  var sheetName = document.getElementById('sheetName').value.trim();
+  var btn       = document.getElementById('btn-fetch');
+  var resultEl  = document.getElementById('fetch-result');
+
+  if (!gasUrl) { resultEl.textContent = '⚠ GAS URLを入力してください'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 取得中…';
+  resultEl.textContent = '';
+
+  var url = gasUrl + '?action=getSheetData&sheetName=' + encodeURIComponent(sheetName);
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      if (data.error) {
+        btn.textContent = '🔄 スプレッドシートからデータ取得';
+        resultEl.style.color = '#c0392b';
+        resultEl.textContent = '❌ ' + data.error;
+        return;
+      }
+      parsedData.koudo = data.rows.map(function(r) {
+        var orderId = (r['注文ID'] || '').trim();
+        if (!orderId) return null;
+        return {
+          _key    : orderId,
+          _keyField: '注文ID',
+          注文ID  : orderId,
+          コース名: (r['コース'] || r['コース名'] || '').trim(),
+          姓      : (r['受講者：姓'] || '').trim(),
+          名      : (r['受講者：名'] || '').trim(),
+          フリガナ: (r['フリガナ'] || '').trim(),
+          メールアドレス   : (r['メールアドレス'] || '').trim(),
+          電話番号         : (r['電話番号'] || '').trim(),
+          送付先郵便番号   : (r['送付先郵便番号'] || '').trim(),
+          送付先都道府県   : (r['送付先都道府県'] || '').trim(),
+          送付先住所       : (r['送付先住所'] || '').trim(),
+          送付先事業所名   : (r['送付先事業所名（個人宅送付以外必須）'] || r['送付先事業所名'] || '').trim(),
+          備考             : (r['備考'] || '').trim()
+        };
+      }).filter(Boolean);
+
+      showPreview('koudo');
+      document.getElementById('btn-koudo').disabled = false;
+      btn.textContent = '✅ ' + parsedData.koudo.length + ' 件取得済み';
+      resultEl.style.color = '#059669';
+      resultEl.textContent = '✅ ' + parsedData.koudo.length + ' 件を読み込みました';
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = '🔄 スプレッドシートからデータ取得';
+      resultEl.style.color = '#c0392b';
+      resultEl.textContent = '❌ 取得エラー: ' + err.message;
+    });
+}
 
 // ===================================================
 // ドラッグ＆ドロップ
 // ===================================================
-// ドロップゾーン設定（koudo / userdetail 共通）
-['koudo', 'userdetail'].forEach(function(name) {
-  var dz = document.getElementById('dz-' + name);
-  if (!dz) return;
-  dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('dragover'); });
-  dz.addEventListener('dragleave', function() { dz.classList.remove('dragover'); });
-  dz.addEventListener('drop', function(e) {
-    e.preventDefault();
-    dz.classList.remove('dragover');
-    var file = e.dataTransfer.files[0];
-    if (file) processFile(name, file);
-  });
+// ドロップゾーン設定（userdetail のみ）
+var dzUd = document.getElementById('dz-userdetail');
+dzUd.addEventListener('dragover', function(e) { e.preventDefault(); dzUd.classList.add('dragover'); });
+dzUd.addEventListener('dragleave', function() { dzUd.classList.remove('dragover'); });
+dzUd.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dzUd.classList.remove('dragover');
+  var file = e.dataTransfer.files[0];
+  if (file) processFile('userdetail', file);
 });
 
 // ===================================================
