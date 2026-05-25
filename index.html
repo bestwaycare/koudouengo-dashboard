@@ -676,7 +676,7 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <label>🔑 GitHub アクセストークン（初回のみ入力）</label>
         <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                oninput="saveToken(this.value)">
-        <small>※ 入力するとこのブラウザに保存されます。<a href="https://github.com/settings/tokens/new?scopes=workflow&description=送信用" target="_blank" style="color:#1a5276">トークンを作成</a>（workflow スコープのみ必要）</small>
+        <small>※ 入力するとこのブラウザに保存されます。<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=ダッシュボード用" target="_blank" style="color:#1a5276">トークンを作成</a>（<strong>repo + workflow</strong> スコープ必要）</small>
       </div>
 
       <!-- コース選択 -->
@@ -1359,11 +1359,47 @@ function updateLoginStatus(){
     btn.className   = 'login-btn loggedin';
     dot.className   = 'login-dot dot-loggedin';
     label.textContent = 'ログイン中';
+    // スコープ確認（repo がないと申込者一覧等が読めない）
+    _checkTokenScope(token);
   } else {
     btn.className   = 'login-btn notlogin';
     dot.className   = 'login-dot dot-notlogin';
     label.textContent = '未ログイン';
   }
+}
+
+// GitHub API でトークンのスコープを確認し、repo がなければ警告
+async function _checkTokenScope(token){
+  try {
+    const res = await fetch('https://api.github.com/user', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if(!res.ok) return;
+    const scopes = res.headers.get('X-OAuth-Scopes') || '';
+    const hasRepo = scopes.split(',').map(s => s.trim()).some(s => s === 'repo' || s === 'public_repo');
+    if(!hasRepo){
+      // スコープ不足バナーを表示（なければ作成）
+      let banner = document.getElementById('scope-warn-banner');
+      if(!banner){
+        banner = document.createElement('div');
+        banner.id = 'scope-warn-banner';
+        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#e67e22;color:#fff;' +
+          'padding:10px 16px;font-size:.85rem;z-index:9999;display:flex;align-items:center;gap:12px;';
+        banner.innerHTML =
+          '<span>⚠️ トークンに <strong>repo</strong> スコープがありません。申込者一覧・未修了者一覧が表示できません。</span>' +
+          '<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=ダッシュボード用" ' +
+          'target="_blank" style="color:#fff;font-weight:700;white-space:nowrap;border:1px solid #fff;' +
+          'padding:3px 10px;border-radius:4px;">🔑 トークンを再作成</a>' +
+          '<button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;' +
+          'color:#fff;font-size:1.1rem;cursor:pointer;">✕</button>';
+        document.body.appendChild(banner);
+      }
+    } else {
+      // 問題なければバナーを消す
+      const banner = document.getElementById('scope-warn-banner');
+      if(banner) banner.remove();
+    }
+  } catch(_){}
 }
 
 function openTokenModal(){
@@ -2149,9 +2185,18 @@ async function reloadApplicants(){
 
   } catch(e) {
     area.className = 'applicants-loading';
-    area.innerHTML = '❌ データ取得に失敗しました<br><small>' + e.message + '</small><br><br>' +
-      '<button onclick="triggerApplicantsWorkflow()" style="padding:8px 16px;background:#148f77;' +
-      'color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85rem">🔄 ワークフローを実行して生成</button>';
+    const is403 = e.message && (e.message.includes('403') || e.message.includes('404'));
+    area.innerHTML = '❌ データ取得に失敗しました<br><small style="color:#aaa">' + e.message + '</small><br><br>' +
+      (is403
+        ? '<div style="background:#fef9e7;border:1px solid #f0c040;border-radius:6px;padding:10px;font-size:.82rem;margin-bottom:10px;text-align:left">' +
+          '⚠️ <strong>トークンの <code>repo</code> スコープが必要です。</strong><br>' +
+          '現在のトークンには読み取り権限がない可能性があります。<br>' +
+          '<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=ダッシュボード用" ' +
+          'target="_blank" style="color:#1a5276;font-weight:700">🔑 repo+workflow スコープでトークンを再作成</a>' +
+          '　→ ヘッダーの「ログイン中」ボタンから再入力してください。</div>'
+        : '') +
+      '<button onclick="reloadApplicants()" style="padding:8px 16px;background:#148f77;' +
+      'color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85rem">🔄 再読み込み</button>';
   }
 }
 
