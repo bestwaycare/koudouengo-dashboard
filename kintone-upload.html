@@ -782,29 +782,35 @@ function startUpload(name) {
 // ===================================================
 // kintone 既存レコード検索
 // ===================================================
+// ===================================================
+// GAS プロキシ経由 kintone 呼び出し（CORS 回避）
+// form-encoded POST → GAS → kintone REST API
+// ===================================================
+function _gasPost(action, data, cb) {
+  var gasUrl = document.getElementById('gasUrl').value.trim();
+  var body = 'action=' + encodeURIComponent(action)
+           + '&data='  + encodeURIComponent(JSON.stringify(data));
+  fetch(gasUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  })
+  .then(function(r) { return r.json(); })
+  .then(cb)
+  .catch(function(e) { cb({ error: e.message }); });
+}
+
 function searchRecord(baseUrl, apiToken, name, record, cb) {
   var query;
   if (name === 'koudo') {
     query = '注文ID = "' + record._key + '"';
   } else {
-    // 姓＋名で検索
     query = '姓 = "' + record['姓'] + '" and 名 = "' + record['名'] + '"';
   }
-
-  var url = baseUrl + 'records.json?app=' + APP_ID +
-            '&query=' + encodeURIComponent(query + ' limit 1') +
-            '&fields[]=' + encodeURIComponent('レコード番号');
-
-  fetch(url, { headers: { 'X-Cybozu-API-Token': apiToken } })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.records && data.records.length > 0) {
-        cb(data.records[0]['レコード番号'].value);
-      } else {
-        cb(null);
-      }
-    })
-    .catch(function() { cb(null); });
+  var subdomain = document.getElementById('subdomain').value.trim();
+  _gasPost('kintoneSearch', { subdomain: subdomain, appId: APP_ID, apiToken: apiToken, query: query }, function(data) {
+    cb(data.found ? data.id : null);
+  });
 }
 
 // ===================================================
@@ -842,41 +848,23 @@ function buildKintoneRecord(name, record) {
 }
 
 // ===================================================
-// kintone POST（新規）
+// kintone 新規作成（GAS経由）
 // ===================================================
 function postRecord(baseUrl, apiToken, record, cb) {
-  fetch(baseUrl + 'record.json', {
-    method: 'POST',
-    headers: {
-      'X-Cybozu-API-Token': apiToken,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ app: APP_ID, record: record })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    cb(d.id ? true : false, d.message || '');
-  })
-  .catch(function(e) { cb(false, e.message); });
+  var subdomain = document.getElementById('subdomain').value.trim();
+  _gasPost('kintoneUpsert', { subdomain: subdomain, appId: APP_ID, apiToken: apiToken, record: record }, function(d) {
+    cb(d.ok === true, d.error || '');
+  });
 }
 
 // ===================================================
-// kintone PUT（更新）
+// kintone 更新（GAS経由）
 // ===================================================
 function putRecord(baseUrl, apiToken, recordId, record, cb) {
-  fetch(baseUrl + 'record.json', {
-    method: 'PUT',
-    headers: {
-      'X-Cybozu-API-Token': apiToken,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ app: APP_ID, id: recordId, record: record })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    cb(d.revision ? true : false, d.message || '');
-  })
-  .catch(function(e) { cb(false, e.message); });
+  var subdomain = document.getElementById('subdomain').value.trim();
+  _gasPost('kintoneUpsert', { subdomain: subdomain, appId: APP_ID, apiToken: apiToken, record: record, recordId: recordId }, function(d) {
+    cb(d.ok === true, d.error || '');
+  });
 }
 </script>
 </body>
