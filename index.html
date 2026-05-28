@@ -1712,8 +1712,7 @@ function openModal(id){
     loadAssignCertCourses();
   }
   if(id === 'cert-check'){
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('cert-filter-date').value = today;
+    document.getElementById('cert-filter-date').value = '';
     document.getElementById('cert-filter-result').textContent = '';
     document.getElementById('cert-filter-table').innerHTML = '';
   }
