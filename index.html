@@ -2528,5 +2528,181 @@ async function triggerAttendanceWorkflow(mode) {
   }
 }
 </script>
+
+<!-- ════════════════════════════════════
+     サポートBot
+════════════════════════════════════ -->
+<style>
+/* 浮きボタン */
+#bot-fab{
+  position:fixed;bottom:24px;right:24px;z-index:9000;
+  width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
+  background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.25);
+  padding:0;overflow:hidden;transition:transform .15s;
+}
+#bot-fab:hover{transform:scale(1.1)}
+#bot-fab img{width:100%;height:100%;object-fit:cover}
+#bot-badge{
+  position:absolute;top:0;right:0;background:#e74c3c;color:#fff;
+  border-radius:50%;width:18px;height:18px;font-size:10px;
+  display:none;align-items:center;justify-content:center;font-weight:700;
+}
+/* モーダル */
+#bot-modal{
+  position:fixed;bottom:90px;right:24px;z-index:9001;
+  width:360px;max-width:calc(100vw - 32px);
+  background:#fff;border-radius:16px;
+  box-shadow:0 8px 32px rgba(0,0,0,.2);
+  display:none;flex-direction:column;
+  overflow:hidden;
+  max-height:calc(100vh - 120px);
+}
+#bot-modal.open{display:flex}
+.bot-header{
+  background:linear-gradient(135deg,#0e6655,#148f77);
+  color:#fff;padding:12px 16px;
+  display:flex;align-items:center;gap:10px;
+}
+.bot-header img{width:36px;height:36px;border-radius:50%;background:#fff;object-fit:cover}
+.bot-header-text{flex:1}
+.bot-header-text h4{font-size:.9rem;margin:0}
+.bot-header-text p{font-size:.72rem;opacity:.85;margin:0}
+#bot-close{background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:0 4px}
+#bot-messages{
+  flex:1;overflow-y:auto;padding:14px;
+  display:flex;flex-direction:column;gap:10px;
+  min-height:200px;
+}
+.bot-msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:.83rem;line-height:1.5;word-break:break-word}
+.bot-msg.bot{background:#f0faf6;color:#1a1a1a;align-self:flex-start;border-bottom-left-radius:3px}
+.bot-msg.user{background:#148f77;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+.bot-msg.typing{color:#aaa;font-style:italic}
+.bot-input-row{
+  display:flex;gap:8px;padding:10px 12px;
+  border-top:1px solid #eee;background:#fafafa;
+}
+#bot-input{
+  flex:1;padding:8px 12px;border:1.5px solid #ccc;border-radius:20px;
+  font-size:.83rem;outline:none;
+}
+#bot-input:focus{border-color:#148f77}
+#bot-send{
+  padding:8px 14px;background:#148f77;color:#fff;border:none;
+  border-radius:20px;cursor:pointer;font-size:.83rem;font-weight:600;
+  transition:background .15s;
+}
+#bot-send:hover{background:#0e6655}
+#bot-send:disabled{background:#ccc;cursor:default}
+.bot-suggest{
+  display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px;
+}
+.bot-suggest button{
+  font-size:.75rem;padding:4px 10px;border-radius:12px;
+  border:1px solid #82e0aa;background:#f0faf6;color:#0e6655;
+  cursor:pointer;transition:background .1s;
+}
+.bot-suggest button:hover{background:#d5f5e3}
+</style>
+
+<!-- 浮きボタン -->
+<button id="bot-fab" onclick="toggleBot()" title="サポートBotに質問する">
+  <img src="favicon-32x32.png" alt="Bot">
+  <span id="bot-badge"></span>
+</button>
+
+<!-- チャットモーダル -->
+<div id="bot-modal">
+  <div class="bot-header">
+    <img src="favicon-32x32.png" alt="Bot">
+    <div class="bot-header-text">
+      <h4>事務局サポートBot</h4>
+      <p>操作方法・イレギュラー対応を相談できます</p>
+    </div>
+    <button id="bot-close" onclick="toggleBot()">✕</button>
+  </div>
+  <div id="bot-messages">
+    <div class="bot-msg bot">こんにちは！行動援護研修の事務局サポートBotです。<br>操作方法やイレギュラー対応など、何でも聞いてください😊</div>
+  </div>
+  <div class="bot-suggest" id="bot-suggest">
+    <button onclick="botQuick('出席簿の作り方は？')">出席簿の作り方</button>
+    <button onclick="botQuick('欠席者が出たらどうする？')">欠席者対応</button>
+    <button onclick="botQuick('修了証はいつ発行される？')">修了証の発行</button>
+    <button onclick="botQuick('振替登録の手順は？')">振替登録</button>
+  </div>
+  <div class="bot-input-row">
+    <input id="bot-input" type="text" placeholder="質問を入力…" onkeydown="if(event.key==='Enter')sendBotMessage()">
+    <button id="bot-send" onclick="sendBotMessage()">送信</button>
+  </div>
+</div>
+
+<script>
+const BOT_GAS_URL = 'https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec';
+let botHistory = [];  // { role, content }[]
+let botOpen = false;
+
+function toggleBot(){
+  botOpen = !botOpen;
+  document.getElementById('bot-modal').classList.toggle('open', botOpen);
+  document.getElementById('bot-badge').style.display = 'none';
+  if(botOpen) document.getElementById('bot-input').focus();
+}
+
+function botQuick(text){
+  document.getElementById('bot-suggest').style.display = 'none';
+  document.getElementById('bot-input').value = text;
+  sendBotMessage();
+}
+
+function addBotMsg(text, role){
+  const el = document.createElement('div');
+  el.className = 'bot-msg ' + role;
+  el.innerHTML = text.replace(/\n/g,'<br>');
+  const msgs = document.getElementById('bot-messages');
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+async function sendBotMessage(){
+  const input = document.getElementById('bot-input');
+  const send  = document.getElementById('bot-send');
+  const text  = input.value.trim();
+  if(!text) return;
+
+  input.value = '';
+  send.disabled = true;
+  document.getElementById('bot-suggest').style.display = 'none';
+
+  addBotMsg(text, 'user');
+  botHistory.push({ role: 'user', content: text });
+
+  const typing = addBotMsg('考え中…', 'bot typing');
+
+  try {
+    const body = new URLSearchParams({
+      action: 'chat',
+      data:   JSON.stringify({ messages: botHistory })
+    });
+    const res  = await fetch(BOT_GAS_URL, { method:'POST', body });
+    const data = await res.json();
+
+    typing.remove();
+    if(data.error){
+      addBotMsg('⚠️ ' + data.error, 'bot');
+    } else {
+      addBotMsg(data.reply, 'bot');
+      botHistory.push({ role: 'assistant', content: data.reply });
+      // 履歴が長くなりすぎないよう20件に制限
+      if(botHistory.length > 20) botHistory = botHistory.slice(-20);
+    }
+  } catch(e){
+    typing.remove();
+    addBotMsg('⚠️ 通信エラーが発生しました: ' + e.message, 'bot');
+  }
+
+  send.disabled = false;
+  input.focus();
+}
+</script>
 </body>
 </html>
