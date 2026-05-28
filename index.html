@@ -407,8 +407,8 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
 <div class="status-bar" style="margin-top:16px">
   <div class="status-item">
     <div class="status-dot dot-green"></div>
-    <span class="status-label">自動処理</span>
-    <span class="status-val">稼働中（毎朝8:00）</span>
+    <span class="status-label">修了証チェック</span>
+    <span class="status-val">自動（毎朝8:00）</span>
   </div>
   <div class="status-item">
     <div class="status-dot dot-blue"></div>
@@ -535,16 +535,18 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       <div class="section-title orange">出席簿</div>
       <a class="item" onclick="openModal('pdf-manual')">
         <div class="item-icon orange">📄</div>
-        <div class="item-text">出席簿を手動で生成する
-          <div class="item-sub">通常は自動生成（3日前）</div>
+        <div class="item-text">出席簿を生成する
+          <div class="item-sub">初日の日付を指定してPDFをメール送信</div>
         </div>
+        <span class="item-badge badge-manual">手動</span>
         <span class="arrow">›</span>
       </a>
       <a class="item" onclick="openModal('pdf-check')">
         <div class="item-icon orange">✉️</div>
-        <div class="item-text">出席簿PDFを再送してもらう
-          <div class="item-sub">GitHub Actionsを手動トリガー</div>
+        <div class="item-text">出席簿を再送する
+          <div class="item-sub">生成済みのPDFを再度メール送信</div>
         </div>
+        <span class="item-badge badge-manual">手動</span>
         <span class="arrow">›</span>
       </a>
     </div>
@@ -802,12 +804,12 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p>自動処理の結果が毎朝メールで届きます。</p>
+      <p>修了証発行の結果が毎朝メールで届きます。</p>
       <ol class="modal-steps">
         <li><strong>staff@e-bestway.net</strong> の受信ボックスを確認</li>
-        <li>毎朝8時頃に届く</li>
-        <li>出席簿PDFはメールに添付されています</li>
-        <li>修了証発行完了もメールで通知されます</li>
+        <li>毎朝8時頃に届く（修了証発行があった日のみ）</li>
+        <li>出席簿PDFは手動生成時にメールに添付されます</li>
+        <li>修了証発行完了はメールで通知されます</li>
       </ol>
       <div class="modal-tip">💡 メールが届かない場合はGitHub Actionsのログを確認してください。</div>
       <a class="modal-btn gray" href="https://mail.google.com" target="_blank">
@@ -842,7 +844,7 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
   <div id="m-pdf-manual" style="display:none">
     <div class="modal-header orange">
       <span style="font-size:1.3rem">📄</span>
-      <h3>出席簿を手動で生成する</h3>
+      <h3>出席簿を生成する</h3>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
@@ -1035,11 +1037,11 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
   <div id="m-pdf-check" style="display:none">
     <div class="modal-header orange">
       <span style="font-size:1.3rem">✉️</span>
-      <h3>出席簿PDFを再送する</h3>
+      <h3>出席簿を再送する</h3>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p>メールが届かなかった場合、再送できます。<br>
+      <p>出席簿PDFを再生成してメール送信します。<br>
          再送したいコースの初日を入力してください。</p>
       <div style="margin:14px 0">
         <label style="font-weight:600;font-size:.88rem;display:block;margin-bottom:5px">
