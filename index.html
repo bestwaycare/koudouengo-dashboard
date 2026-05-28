@@ -958,12 +958,26 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p>「修了証発行したか＝済」で絞り込み、研修修了日の降順で表示します。</p>
-      <a class="modal-btn" style="background:#6c3483;width:100%;display:block;text-align:center;margin-top:4px"
-         href="https://azoch3bdyyq2.cybozu.com/k/279/?view=6435570" target="_blank">
-        🏢 kintoneを開く（修了証チェックビュー）
+      <p>研修修了日を指定して修了者を検索します。</p>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin:14px 0 8px">
+        <div style="flex:1">
+          <label style="font-weight:600;font-size:.88rem;display:block;margin-bottom:4px">研修修了日</label>
+          <input id="cert-filter-date" type="date"
+                 style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:.9rem">
+        </div>
+        <button onclick="fetchCompletions()"
+                style="padding:8px 16px;background:#6c3483;color:#fff;border:none;border-radius:6px;
+                       font-size:.88rem;font-weight:600;cursor:pointer;white-space:nowrap;height:38px">
+          🔍 検索
+        </button>
+      </div>
+      <div id="cert-filter-result" style="font-size:.82rem;margin-bottom:6px"></div>
+      <div id="cert-filter-table" style="overflow-y:auto;max-height:300px;border:1px solid #e0d0f0;border-radius:6px"></div>
+      <a href="https://azoch3bdyyq2.cybozu.com/k/279/?view=6435570" target="_blank"
+         style="display:block;text-align:center;margin-top:10px;font-size:.8rem;color:#6c3483">
+        🏢 kintoneで開く（修了証チェックビュー）
       </a>
-      <div class="modal-tip" style="margin-top:12px">💡 研修2日目から7日以内に自動発行されます。発行されない場合は振替登録が未完了の可能性があります。</div>
+      <div class="modal-tip" style="margin-top:8px">💡 研修2日目から7日以内に自動発行されます。発行されない場合は振替登録が未完了の可能性があります。</div>
     </div>
   </div>
 
@@ -1696,6 +1710,12 @@ function openModal(id){
   if(id === 'assign-cert'){
     document.getElementById('assign-cert-result').textContent = '';
     loadAssignCertCourses();
+  }
+  if(id === 'cert-check'){
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('cert-filter-date').value = today;
+    document.getElementById('cert-filter-result').textContent = '';
+    document.getElementById('cert-filter-table').innerHTML = '';
   }
 }
 
@@ -2808,6 +2828,54 @@ async function sendBotMessage(){
 
   send.disabled = false;
   input.focus();
+}
+
+// ── 修了者検索（GAS経由でkintone照会）──
+async function fetchCompletions() {
+  const date     = (document.getElementById('cert-filter-date')?.value || '').trim();
+  const resultEl = document.getElementById('cert-filter-result');
+  const tableEl  = document.getElementById('cert-filter-table');
+
+  resultEl.textContent = '⏳ 検索中…';
+  tableEl.innerHTML = '';
+
+  try {
+    const url = BOT_GAS_URL + '?action=getCompletions' + (date ? '&date=' + encodeURIComponent(date) : '');
+    const res  = await fetch(url, { redirect: 'follow' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const records = data.records || [];
+    resultEl.textContent = date
+      ? `${date} の修了者: ${records.length}名`
+      : `修了証発行済み: ${records.length}名`;
+
+    if (records.length === 0) {
+      tableEl.innerHTML = '<div style="padding:16px;text-align:center;color:#999">該当なし</div>';
+      return;
+    }
+
+    tableEl.innerHTML =
+      '<table style="width:100%;border-collapse:collapse;font-size:.8rem">' +
+      '<thead><tr style="background:#f0e6fa;position:sticky;top:0">' +
+      '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #ddd">氏名</th>' +
+      '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #ddd">コース</th>' +
+      '<th style="padding:5px 8px;text-align:center;border-bottom:1px solid #ddd">修了者番号</th>' +
+      '<th style="padding:5px 8px;text-align:center;border-bottom:1px solid #ddd">修了日</th>' +
+      '</tr></thead><tbody>' +
+      records.map((r, i) =>
+        `<tr style="background:${i%2===0?'#fff':'#faf5ff'}">
+          <td style="padding:5px 8px">${r.surname}${r.given}</td>
+          <td style="padding:5px 8px;color:#555">${r.course}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:600">${r.certNumber || '─'}</td>
+          <td style="padding:5px 8px;text-align:center">${r.completionDate || '─'}</td>
+        </tr>`
+      ).join('') +
+      '</tbody></table>';
+  } catch(e) {
+    resultEl.innerHTML = '<span style="color:#c0392b">❌ ' + e.message + '</span>';
+  }
 }
 
 // ── 修了者番号付番 ──
