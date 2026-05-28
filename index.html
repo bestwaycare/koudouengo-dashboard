@@ -958,22 +958,11 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p>研修修了日を指定して kintone を絞り込み表示します。</p>
-      <div style="margin:14px 0">
-        <label style="font-weight:600;font-size:.88rem;display:block;margin-bottom:5px">
-          研修修了日
-        </label>
-        <input id="cert-check-date" type="date"
-               style="width:100%;padding:9px 12px;border:1.5px solid #ccc;border-radius:6px;
-                      font-size:.95rem;font-family:inherit">
-        <div style="font-size:.78rem;color:#888;margin-top:4px">
-          空欄の場合は「修了証発行したか＝済」の全件を表示します
-        </div>
-      </div>
-      <button class="modal-btn" style="background:#6c3483;width:100%;margin-top:4px"
-              onclick="openKintoneWithCertFilter()">
-        🏢 kintoneを絞り込んで開く
-      </button>
+      <p>「修了証発行したか＝済」で絞り込み、研修修了日の降順で表示します。</p>
+      <a class="modal-btn" style="background:#6c3483;width:100%;display:block;text-align:center;margin-top:4px"
+         href="https://azoch3bdyyq2.cybozu.com/k/279/?view=6435570" target="_blank">
+        🏢 kintoneを開く（修了証チェックビュー）
+      </a>
       <div class="modal-tip" style="margin-top:12px">💡 研修2日目から7日以内に自動発行されます。発行されない場合は振替登録が未完了の可能性があります。</div>
     </div>
   </div>
@@ -1707,11 +1696,6 @@ function openModal(id){
   if(id === 'assign-cert'){
     document.getElementById('assign-cert-result').textContent = '';
     loadAssignCertCourses();
-  }
-  if(id === 'cert-check'){
-    // デフォルトで今日の日付をセット
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('cert-check-date').value = today;
   }
 }
 
@@ -2824,25 +2808,6 @@ async function sendBotMessage(){
 
   send.disabled = false;
   input.focus();
-}
-
-// ── kintone を研修修了日で絞り込んで開く ──
-function openKintoneWithCertFilter() {
-  const base = 'https://azoch3bdyyq2.cybozu.com/k/279/';
-  const dateVal = (document.getElementById('cert-check-date')?.value || '').trim();
-
-  let condition;
-  if (dateVal) {
-    // 例: 研修修了日 = "2026-05-23"
-    condition = `研修修了日 = "${dateVal}"`;
-  } else {
-    // 日付未指定 → 修了証発行済み全件、修了日降順
-    condition = '修了証発行したか in ("済") order by 研修修了日 desc';
-  }
-
-  // kintone リスト画面の URL フィルタ形式
-  const url = base + '?condition=' + encodeURIComponent(condition);
-  window.open(url, '_blank');
 }
 
 // ── 修了者番号付番 ──
