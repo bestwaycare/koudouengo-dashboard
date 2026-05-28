@@ -470,6 +470,14 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <span class="item-badge badge-manual">手動</span>
         <span class="arrow">›</span>
       </a>
+      <a class="item" onclick="openModal('assign-cert')">
+        <div class="item-icon green">🔢</div>
+        <div class="item-text">修了者番号を付番する
+          <div class="item-sub">コース選択 → kintoneに連番を登録</div>
+        </div>
+        <span class="item-badge badge-manual">手動</span>
+        <span class="arrow">›</span>
+      </a>
     </div>
 
     <div class="section">
@@ -1056,6 +1064,35 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         ✉️ 再送する
       </button>
       <div class="modal-tip" style="margin-top:12px">💡 数分で staff@e-bestway.net にメールが届きます。</div>
+    </div>
+  </div>
+
+  <!-- 修了者番号付番 -->
+  <div id="m-assign-cert" style="display:none">
+    <div class="modal-header" style="background:#1a6b3c">
+      <span style="font-size:1.3rem">🔢</span>
+      <h3>修了者番号を付番する</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>コースを選択して、受講者全員に修了者番号（2026-001〜）を付番します。<br>
+         すでに番号がある受講者はスキップされます。</p>
+      <div style="margin:14px 0">
+        <label style="font-weight:600;font-size:.88rem;display:block;margin-bottom:5px">
+          コース<span style="color:#e74c3c">*</span>
+        </label>
+        <select id="assign-cert-course"
+                style="width:100%;padding:9px 12px;border:1.5px solid #ccc;border-radius:6px;
+                       font-size:.9rem;font-family:inherit">
+          <option value="">── コースを選択 ──</option>
+        </select>
+      </div>
+      <div id="assign-cert-result" style="min-height:1.4em;font-size:.88rem"></div>
+      <button class="modal-btn" style="background:#1a6b3c;margin-top:10px;width:100%"
+              onclick="triggerAssignCertWorkflow()">
+        🔢 付番する
+      </button>
+      <div class="modal-tip" style="margin-top:12px">💡 付番完了後、kintone の修了者番号列で確認できます。完了メールも届きます。</div>
     </div>
   </div>
 
@@ -1662,6 +1699,10 @@ function openModal(id){
   if(m){ m.style.display='block'; }
   document.getElementById('overlay').classList.add('show');
   if(id === 'send-teachers'){ loadToken(); loadSendTeachersModal(); }
+  if(id === 'assign-cert'){
+    document.getElementById('assign-cert-result').textContent = '';
+    loadAssignCertCourses();
+  }
 }
 
 function closeModal(e){
@@ -2773,6 +2814,70 @@ async function sendBotMessage(){
 
   send.disabled = false;
   input.focus();
+}
+
+// ── 修了者番号付番 ──
+async function loadAssignCertCourses() {
+  const sel = document.getElementById('assign-cert-course');
+  if (!sel) return;
+  // courses.json からコース一覧を取得
+  const token = localStorage.getItem('gh_token') || '';
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/contents/courses.json`,
+      { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3.raw' } }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const courses = await res.json();
+    const list = Array.isArray(courses)
+      ? courses.filter(c => c && c !== 'コース' && /\d+月/.test(c))
+      : [];
+    sel.innerHTML = '<option value="">── コースを選択 ──</option>' +
+      list.map(c => `<option value="${c}">${c}</option>`).join('');
+  } catch(e) {
+    sel.innerHTML = '<option value="">（コース一覧の取得に失敗しました）</option>';
+  }
+}
+
+async function triggerAssignCertWorkflow() {
+  const resultEl = document.getElementById('assign-cert-result');
+  const course   = (document.getElementById('assign-cert-course')?.value || '').trim();
+  const token    = localStorage.getItem('gh_token') || '';
+
+  if (!token) {
+    resultEl.innerHTML = '<span style="color:#c0392b">⚠ ログインが必要です。</span>';
+    return;
+  }
+  if (!course) {
+    resultEl.innerHTML = '<span style="color:#c0392b">⚠ コースを選択してください。</span>';
+    return;
+  }
+
+  resultEl.innerHTML = '⏳ GitHub Actions を起動中…';
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/actions/workflows/daily.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ref: 'main', inputs: { assign_cert_course: course } })
+      }
+    );
+    if (res.status === 204) {
+      resultEl.innerHTML =
+        `<span style="color:#1e8449">✅ 「${course}」の付番を開始しました。数分で完了メールが届きます。</span>`;
+    } else {
+      const err = await res.json().catch(() => ({}));
+      resultEl.innerHTML =
+        `<span style="color:#c0392b">❌ エラー (HTTP ${res.status}): ${err.message || '不明なエラー'}</span>`;
+    }
+  } catch(e) {
+    resultEl.innerHTML = `<span style="color:#c0392b">❌ 通信エラー: ${e.message}</span>`;
+  }
 }
 </script>
 </body>
