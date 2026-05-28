@@ -1233,10 +1233,17 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <input type="text" id="bulk-grp" class="bulk-inp" placeholder="例:1">
         <button class="bulk-apply-btn" onclick="bulkApplyMeta()">✔ 選択行に適用</button>
       </div>
-      <button onclick="reloadApplicants()" style="padding:6px 12px;background:#148f77;color:#fff;
-        border:none;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto">
-        🔄 更新
-      </button>
+      <div style="display:flex;gap:6px;margin-left:auto">
+        <button onclick="triggerApplicantsWorkflow()" style="padding:6px 12px;background:#0e6655;color:#fff;
+          border:none;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap"
+          title="kintoneからデータを再取得してapplicants.jsonを更新（GitHub Actions実行）">
+          ⚡ kintoneから再取得
+        </button>
+        <button onclick="reloadApplicants()" style="padding:6px 12px;background:#148f77;color:#fff;
+          border:none;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap">
+          🔄 表示を更新
+        </button>
+      </div>
     </div>
 
     <!-- テーブル本体 -->
