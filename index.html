@@ -1459,6 +1459,7 @@ function applyTokenFromModal(){
   // データを再読込
   loadSendTeachersModal();
   applicantsData = null;
+  transfersCache = [];
   incompleteData = null;
   loadProgressPanel();
   closeTokenModal();
@@ -1472,6 +1473,7 @@ function logoutToken(){
   const el = document.getElementById('gh-token');
   if(el) el.value = '';
   applicantsData = null;
+  transfersCache = [];
   incompleteData = null;
   updateLoginStatus();
   closeTokenModal();
@@ -2032,6 +2034,7 @@ function renderIncompleteTable(students){
 //  👥 申込者一覧
 // ══════════════════════════════════════════
 let applicantsData = null;
+let transfersCache = [];   // 振替登録一覧（GASから取得）
 let appMetaSaveTimer = null;
 
 // ── メタデータ（封筒・グループ）は GitHub ファイルを正として扱う ──
@@ -2183,10 +2186,23 @@ async function reloadApplicants(){
       return;
     }
 
+    // 振替登録をGASから取得してキャッシュ
+    try {
+      const tres = await fetch(BOT_GAS_URL + '?action=getTransfers', { redirect: 'follow' });
+      if(tres.ok){
+        const tdata = await tres.json();
+        transfersCache = (tdata.transfers || []).filter(t => t.toCourse && t.toCourse.trim());
+      }
+    } catch(_){ transfersCache = []; }
+
+    // コースセレクター更新（振替者数も含む）
     sel.innerHTML = '<option value="">── コースを選択 ──</option>' +
       courses.map(c => {
-        const cnt = (data.courses[c] || []).length;
-        return `<option value="${c}">${c}（${cnt}名）</option>`;
+        const base = (data.courses[c] || []).length;
+        const xfer = transfersCache.filter(t => t.toCourse.trim() === c).length;
+        const total = base + xfer;
+        const xferStr = xfer > 0 ? `+${xfer}振替` : '';
+        return `<option value="${c}">${c}（${total}名${xferStr}）</option>`;
       }).join('');
 
     // 先頭コースを自動選択
@@ -2225,7 +2241,24 @@ function renderApplicantsCourse(){
     return;
   }
 
+  // 通常申込者（kintone）
   let students = (applicantsData.courses[courseName] || []).slice();
+
+  // 振替者をマージ
+  transfersCache
+    .filter(t => t.toCourse && t.toCourse.trim() === courseName)
+    .forEach(t => {
+      students.push({
+        id:           't-' + t.rowIndex,
+        name:         (t.surname + ' ' + t.given).trim(),
+        furigana:     t.furigana || '',
+        company:      t.company  || '',
+        isTransfer:   true,
+        fromCourse:   t.fromCourse   || '',
+        absentDate:   t.absentDate   || '',
+        transferDate: t.transferDate || ''
+      });
+    });
 
   if(q){
     students = students.filter(s =>
@@ -2263,12 +2296,18 @@ function renderApplicantsCourse(){
     const statusDot = s.status === '済'
       ? '<span style="font-size:.68rem;background:#d5f5e3;color:#1e8449;padding:1px 6px;border-radius:3px">済</span>'
       : '';
-    html += `<tr id="app-row-${s.id}">
+    // 振替バッジ
+    const xferBadge = s.isTransfer
+      ? `<span title="${s.fromCourse||''}から振替${s.transferDate?' ('+s.transferDate+')':''}"
+           style="font-size:.65rem;background:#fdebd0;color:#a04000;padding:1px 5px;border-radius:3px;margin-left:4px;white-space:nowrap">振替</span>`
+      : '';
+    const rowStyle = s.isTransfer ? ' style="background:#fffaf5"' : '';
+    html += `<tr id="app-row-${s.id}"${rowStyle}>
       <td><input type="checkbox" class="app-row-chk" data-id="${s.id}"
           style="width:15px;height:15px;cursor:pointer"
           onchange="toggleAppRowHighlight('${s.id}',this.checked)"></td>
       <td style="text-align:center;color:#aaa;font-size:.73rem">${i+1}</td>
-      <td><strong>${s.name||'─'}</strong> ${statusDot}</td>
+      <td><strong>${s.name||'─'}</strong> ${statusDot}${xferBadge}</td>
       <td style="font-size:.79rem;color:#666">${s.furigana||'─'}</td>
       <td style="font-size:.79rem">${s.company||'─'}</td>
       <td style="text-align:center">
