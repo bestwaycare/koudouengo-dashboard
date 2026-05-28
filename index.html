@@ -2195,13 +2195,17 @@ async function reloadApplicants(){
       }
     } catch(_){ transfersCache = []; }
 
-    // コースセレクター更新（振替者数も含む）
+    // コースセレクター更新（振替者数は人数でカウント・重複除去）
     sel.innerHTML = '<option value="">── コースを選択 ──</option>' +
       courses.map(c => {
         const base = (data.courses[c] || []).length;
-        const xfer = transfersCache.filter(t => t.toCourse.trim() === c).length;
-        const total = base + xfer;
-        const xferStr = xfer > 0 ? `+${xfer}振替` : '';
+        const xferPeople = new Set(
+          transfersCache
+            .filter(t => t.toCourse.trim() === c)
+            .map(t => (t.furigana || (t.surname + t.given)).trim())
+        ).size;
+        const total = base + xferPeople;
+        const xferStr = xferPeople > 0 ? `+${xferPeople}振替` : '';
         return `<option value="${c}">${c}（${total}名${xferStr}）</option>`;
       }).join('');
 
@@ -2244,21 +2248,30 @@ function renderApplicantsCourse(){
   // 通常申込者（kintone）
   let students = (applicantsData.courses[courseName] || []).slice();
 
-  // 振替者をマージ
+  // 振替者をマージ（同一人物は1行にまとめる）
+  const xferMap = {};
   transfersCache
     .filter(t => t.toCourse && t.toCourse.trim() === courseName)
     .forEach(t => {
-      students.push({
-        id:           't-' + t.rowIndex,
-        name:         (t.surname + ' ' + t.given).trim(),
-        furigana:     t.furigana || '',
-        company:      t.company  || '',
-        isTransfer:   true,
-        fromCourse:   t.fromCourse   || '',
-        absentDate:   t.absentDate   || '',
-        transferDate: t.transferDate || ''
-      });
+      // フリガナ優先、なければ氏名で同一人物を判定
+      const key = (t.furigana || (t.surname + t.given)).trim();
+      if(!xferMap[key]){
+        xferMap[key] = {
+          id:            't-' + t.rowIndex,
+          name:          (t.surname + ' ' + t.given).trim(),
+          furigana:      t.furigana || '',
+          company:       t.company  || '',
+          isTransfer:    true,
+          fromCourse:    t.fromCourse || '',
+          transferDates: []
+        };
+      }
+      if(t.transferDate) xferMap[key].transferDates.push(t.transferDate);
     });
+  Object.values(xferMap).forEach(s => {
+    s.transferDate = s.transferDates.join('・');
+    students.push(s);
+  });
 
   if(q){
     students = students.filter(s =>
