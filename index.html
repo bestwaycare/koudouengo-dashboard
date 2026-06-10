@@ -540,6 +540,18 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
     </div>
 
     <div class="section">
+      <div class="section-title" style="background:#7d3c98">封筒・資料</div>
+      <a class="item" onclick="openModal('generate-envelopes')">
+        <div class="item-icon purple">✉️</div>
+        <div class="item-text">封筒PDFを作成する
+          <div class="item-sub">角2宛名・長3(A/B)をまとめてメール送信</div>
+        </div>
+        <span class="item-badge badge-manual">手動</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
       <div class="section-title orange">出席簿</div>
       <a class="item" onclick="openModal('pdf-manual')">
         <div class="item-icon orange">📄</div>
@@ -857,6 +869,42 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       <a class="modal-btn orange" href="https://azoch3bdyyq2.cybozu.com/k/279/" target="_blank">
         🏢 kintoneを開く
       </a>
+    </div>
+  </div>
+
+  <!-- 封筒PDF生成 -->
+  <div id="m-generate-envelopes" style="display:none">
+    <div class="modal-header" style="background:#7d3c98">
+      <span style="font-size:1.3rem">✉️</span>
+      <h3>封筒PDFを作成する</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">① コースを選ぶ</div>
+      <select id="env-course-sel" class="course-select">
+        <option value="">── 読み込み中… ──</option>
+      </select>
+
+      <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">② 追加資料（任意）</div>
+      <input type="file" id="env-attachment" accept="application/pdf,*/*"
+        style="font-size:.82rem" onchange="onEnvAttachmentSelected(this)">
+      <div id="env-attachment-status" style="margin-top:4px;font-size:.78rem;color:#888"></div>
+
+      <div class="modal-tip" style="margin-top:14px">
+        💡 生成されるPDF:<br>
+        &nbsp;&nbsp;・<b>角2封筒_宛名.pdf</b> — 受講生全員分（A→B順）<br>
+        &nbsp;&nbsp;・<b>長3封筒_A.pdf</b> — Aグループ枚数分<br>
+        &nbsp;&nbsp;・<b>長3封筒_B.pdf</b> — Bグループ枚数分<br>
+        メールで届きます。そのまま印刷してください。
+      </div>
+
+      <div id="env-result" class="send-result"></div>
+
+      <button class="modal-btn" style="background:#7d3c98;margin-top:16px"
+              id="env-btn" onclick="generateEnvelopes()">
+        ✉️ 封筒PDFを生成する
+      </button>
     </div>
   </div>
 
@@ -1585,6 +1633,24 @@ async function fetchPrivateJson(filename){
   return await res.json();
 }
 
+async function loadEnvelopeCourses(){
+  const token = localStorage.getItem('gh_token') || '';
+  const sel   = document.getElementById('env-course-sel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">── 読み込み中… ──</option>';
+  try {
+    const res  = await fetch(`${GH_API}/courses.json`,
+      { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }});
+    const file = await res.json();
+    const data = JSON.parse(atob(file.content.replace(/\n/g,'')));
+    const courses = Array.isArray(data) ? data : (data.courses || []);
+    sel.innerHTML = '<option value="">── コースを選択 ──</option>'
+      + courses.map(c => `<option value="${c}">${c}</option>`).join('');
+  } catch(e) {
+    sel.innerHTML = `<option value="">── 取得失敗 (${e.message}) ──</option>`;
+  }
+}
+
 async function loadSendTeachersModal(){
   const token = localStorage.getItem('gh_token') || '';
   const noToken = '<div style="color:#999;font-size:.82rem;padding:6px 0">🔑 上のトークンを入力すると表示されます</div>';
@@ -1763,6 +1829,85 @@ function onAttachmentSelected(input){
   }
 }
 
+// ══ 封筒PDF生成 ══
+const GH_WF_ENV = 'generate-envelopes.yml';
+
+async function generateEnvelopes() {
+  const token  = localStorage.getItem('gh_token') || '';
+  const course = (document.getElementById('env-course-sel')?.value || '').trim();
+  const btn    = document.getElementById('env-btn');
+  const result = document.getElementById('env-result');
+  if(result) result.style.display = 'none';
+
+  if(!token){ showEnvResult('GitHubトークンを入力してください。', false); return; }
+  if(!course){ showEnvResult('コースを選択してください。', false); return; }
+
+  btn.textContent = '⏳ 送信中…';
+  btn.style.opacity = '.6';
+  btn.onclick = null;
+
+  try {
+    let attachmentFilename = '';
+    const fileInput = document.getElementById('env-attachment');
+    if(fileInput && fileInput.files.length > 0){
+      btn.textContent = '⏳ ファイルをアップロード中…';
+      attachmentFilename = await uploadAttachmentToRepo(token, fileInput.files[0]);
+    }
+
+    btn.textContent = '⏳ 生成中…';
+    const inputs = { course_name: course };
+    if(attachmentFilename) inputs.attachment_filename = attachmentFilename;
+
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/actions/workflows/${GH_WF_ENV}/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ref: 'main', inputs }),
+      }
+    );
+    if(res.status === 204){
+      showEnvResult('✅ 生成ジョブを開始しました！\n数分後に staff@e-bestway.net へ届きます。', true);
+      if(fileInput) fileInput.value = '';
+      const st = document.getElementById('env-attachment-status');
+      if(st) st.textContent = '';
+    } else {
+      const body = await res.json().catch(()=>({}));
+      showEnvResult('❌ エラー: ' + (body.message || res.status), false);
+    }
+  } catch(e) {
+    showEnvResult('❌ ' + e.message, false);
+  }
+
+  btn.textContent = '✉️ 封筒PDFを生成する';
+  btn.style.opacity = '1';
+  btn.onclick = generateEnvelopes;
+}
+
+function showEnvResult(msg, ok){
+  const el = document.getElementById('env-result');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'send-result ' + (ok ? 'ok' : 'err');
+  el.style.display = 'block';
+}
+
+function onEnvAttachmentSelected(input){
+  const st = document.getElementById('env-attachment-status');
+  if(!st) return;
+  if(input.files.length > 0){
+    const f = input.files[0];
+    st.textContent = `📎 ${f.name}（${(f.size/1024).toFixed(0)} KB）`;
+    st.style.color = '#7d3c98';
+  } else {
+    st.textContent = '';
+  }
+}
+
 function showSendResult(msg, ok){
   const el = document.getElementById('send-result');
   if(!el) return;
@@ -1791,6 +1936,7 @@ function openModal(id){
   if(m){ m.style.display='block'; }
   document.getElementById('overlay').classList.add('show');
   if(id === 'send-teachers'){ loadToken(); loadSendTeachersModal(); }
+  if(id === 'generate-envelopes'){ loadToken(); loadEnvelopeCourses(); }
   if(id === 'assign-cert'){
     document.getElementById('assign-cert-result').textContent = '';
     loadAssignCertCourses();
