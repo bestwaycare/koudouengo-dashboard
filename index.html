@@ -549,6 +549,13 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <span class="item-badge badge-manual">手動</span>
         <span class="arrow">›</span>
       </a>
+      <a class="item" onclick="openModal('group-overrides')">
+        <div class="item-icon purple">🔀</div>
+        <div class="item-text">A/Bグループを手動変更
+          <div class="item-sub">特定の受講生のグループ割り当てを上書き</div>
+        </div>
+        <span class="arrow">›</span>
+      </a>
     </div>
 
     <div class="section">
@@ -881,10 +888,18 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
     </div>
     <div class="modal-body">
 
+      <div class="gh-token-area" style="margin-bottom:14px">
+        <label>🔑 GitHub アクセストークン（初回のみ入力）</label>
+        <input type="password" id="env-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+               oninput="saveToken(this.value)">
+        <small>※ 入力するとこのブラウザに保存されます。</small>
+      </div>
+
       <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">① コースを選ぶ</div>
       <select id="env-course-sel" class="course-select">
         <option value="">── 読み込み中… ──</option>
       </select>
+      <button onclick="loadEnvelopeCourses()" style="margin-top:4px;font-size:.75rem;padding:3px 10px;background:#ede7f6;border:1px solid #b39ddb;border-radius:4px;cursor:pointer">🔄 再読み込み</button>
 
       <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">② 追加資料（任意）</div>
       <input type="file" id="env-attachment" accept="application/pdf,*/*"
@@ -904,6 +919,46 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       <button class="modal-btn" style="background:#7d3c98;margin-top:16px"
               id="env-btn" onclick="generateEnvelopes()">
         ✉️ 封筒PDFを生成する
+      </button>
+    </div>
+  </div>
+
+  <!-- A/Bグループ手動変更 -->
+  <div id="m-group-overrides" style="display:none">
+    <div class="modal-header" style="background:#7d3c98">
+      <span style="font-size:1.3rem">🔀</span>
+      <h3>A/Bグループを手動変更</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:#555;margin-bottom:12px">
+        自動振り分けを上書きしたい受講生を登録します。<br>
+        コース名は部分一致（例：「6月土曜日」）でも動作します。
+      </p>
+
+      <div id="go-loading" style="font-size:.82rem;color:#888;margin-bottom:10px">読み込み中…</div>
+
+      <table id="go-table" style="width:100%;border-collapse:collapse;font-size:.82rem;display:none">
+        <thead>
+          <tr style="background:#f3e5f5">
+            <th style="padding:6px 8px;border:1px solid #ddd;text-align:left">コース名</th>
+            <th style="padding:6px 8px;border:1px solid #ddd;text-align:left">氏名</th>
+            <th style="padding:6px 8px;border:1px solid #ddd;text-align:center;width:60px">グループ</th>
+            <th style="padding:6px 8px;border:1px solid #ddd;text-align:center;width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="go-tbody"></tbody>
+      </table>
+
+      <button onclick="goAddRow()" style="margin-top:10px;font-size:.8rem;padding:6px 14px;
+        background:#ede7f6;border:1px solid #b39ddb;border-radius:5px;cursor:pointer">
+        ＋ 行を追加
+      </button>
+
+      <div id="go-result" class="send-result" style="margin-top:10px"></div>
+
+      <button class="modal-btn" style="background:#7d3c98;margin-top:14px" onclick="goSave()">
+        💾 保存する
       </button>
     </div>
   </div>
@@ -1615,8 +1670,10 @@ function saveToken(val){
 
 function loadToken(){
   const t = localStorage.getItem('gh_token') || '';
-  const el = document.getElementById('gh-token');
-  if(el && t) el.value = t;
+  ['gh-token','env-gh-token'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el && t) el.value = t;
+  });
 }
 
 // GitHub API（認証あり）でプライベートリポジトリのJSONを取得
@@ -1637,17 +1694,30 @@ async function loadEnvelopeCourses(){
   const token = localStorage.getItem('gh_token') || '';
   const sel   = document.getElementById('env-course-sel');
   if(!sel) return;
+  if(!token){
+    sel.innerHTML = '<option value="">🔑 上のトークンを入力してください</option>';
+    return;
+  }
   sel.innerHTML = '<option value="">── 読み込み中… ──</option>';
   try {
-    const res  = await fetch(`${GH_API}/courses.json`,
-      { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }});
-    const file = await res.json();
-    const data = JSON.parse(atob(file.content.replace(/\n/g,'')));
-    const courses = Array.isArray(data) ? data : (data.courses || []);
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/contents/courses.json`,
+      { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3.raw' } }
+    );
+    if (res.status === 401) throw new Error('トークンが無効です（401）');
+    if (res.status === 404) throw new Error('courses.jsonが見つかりません（404）');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const courses = (Array.isArray(data) ? data : (data.courses || []))
+      .filter(c => c && c !== 'コース');
+    if(courses.length === 0){
+      sel.innerHTML = '<option value="">（コースが登録されていません）</option>';
+      return;
+    }
     sel.innerHTML = '<option value="">── コースを選択 ──</option>'
       + courses.map(c => `<option value="${c}">${c}</option>`).join('');
   } catch(e) {
-    sel.innerHTML = `<option value="">── 取得失敗 (${e.message}) ──</option>`;
+    sel.innerHTML = `<option value="">── 取得失敗: ${e.message} ──</option>`;
   }
 }
 
@@ -1829,6 +1899,114 @@ function onAttachmentSelected(input){
   }
 }
 
+// ══ A/Bグループ手動変更 ══
+const GO_PATH = 'group_overrides.csv';
+let goRows = []; // [{course_name, name, side}]
+
+async function goLoad() {
+  const token = localStorage.getItem('gh_token');
+  document.getElementById('go-loading').style.display = 'block';
+  document.getElementById('go-table').style.display = 'none';
+  document.getElementById('go-result').style.display = 'none';
+  goRows = [];
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GO_PATH}`, {
+      headers: token ? { Authorization: `token ${token}` } : {}
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const raw = data.content || '';
+      const csv = raw ? atob(raw.replace(/\n/g, '')) : '';
+      const lines = csv.split('\n').filter(l => l.trim());
+      // skip header
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',');
+        if (parts.length >= 3) {
+          goRows.push({ course_name: parts[0].trim(), name: parts[1].trim(), side: parts[2].trim() });
+        }
+      }
+    }
+  } catch(e) { /* ファイルなし = 空のまま */ }
+  document.getElementById('go-loading').style.display = 'none';
+  goRender();
+}
+
+function goRender() {
+  const tbody = document.getElementById('go-tbody');
+  tbody.innerHTML = '';
+  goRows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding:4px 6px;border:1px solid #ddd">
+        <input value="${r.course_name}" oninput="goRows[${i}].course_name=this.value"
+          style="width:100%;border:none;font-size:.82rem;outline:none">
+      </td>
+      <td style="padding:4px 6px;border:1px solid #ddd">
+        <input value="${r.name}" oninput="goRows[${i}].name=this.value"
+          style="width:100%;border:none;font-size:.82rem;outline:none">
+      </td>
+      <td style="padding:4px 6px;border:1px solid #ddd;text-align:center">
+        <select onchange="goRows[${i}].side=this.value"
+          style="border:none;font-size:.82rem;font-weight:700;background:transparent;cursor:pointer">
+          <option value="A" ${r.side.toUpperCase()==='A'?'selected':''}>A</option>
+          <option value="B" ${r.side.toUpperCase()==='B'?'selected':''}>B</option>
+        </select>
+      </td>
+      <td style="padding:4px 6px;border:1px solid #ddd;text-align:center">
+        <button onclick="goDeleteRow(${i})" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:1rem">🗑</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('go-table').style.display = goRows.length ? 'table' : 'none';
+}
+
+function goAddRow() {
+  goRows.push({ course_name: '', name: '', side: 'A' });
+  document.getElementById('go-table').style.display = 'table';
+  goRender();
+}
+
+function goDeleteRow(i) {
+  goRows.splice(i, 1);
+  goRender();
+}
+
+async function goSave() {
+  const token = localStorage.getItem('gh_token');
+  if (!token) { alert('GitHubトークンを設定してください'); return; }
+  const valid = goRows.filter(r => r.course_name && r.name && r.side);
+  const csv = 'course_name,name,side\n' + valid.map(r => `${r.course_name},${r.name},${r.side}`).join('\n') + '\n';
+  const content = btoa(unescape(encodeURIComponent(csv)));
+
+  // 現在の SHA を取得
+  let sha = '';
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GO_PATH}`,
+      { headers: { Authorization: `token ${token}` } });
+    if (r.ok) { const d = await r.json(); sha = d.sha; }
+  } catch(e) {}
+
+  const body = { message: 'グループ上書き設定を更新', content };
+  if (sha) body.sha = sha;
+
+  const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GO_PATH}`, {
+    method: 'PUT',
+    headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const el = document.getElementById('go-result');
+  el.style.display = 'block';
+  if (res.ok) {
+    el.textContent = '✅ 保存しました（' + valid.length + '件）';
+    el.className = 'send-result ok';
+  } else {
+    const err = await res.json().catch(()=>({}));
+    el.textContent = '❌ 保存失敗: ' + (err.message || res.status);
+    el.className = 'send-result err';
+  }
+}
+
 // ══ 封筒PDF生成 ══
 const GH_WF_ENV = 'generate-envelopes.yml';
 
@@ -1937,6 +2115,7 @@ function openModal(id){
   document.getElementById('overlay').classList.add('show');
   if(id === 'send-teachers'){ loadToken(); loadSendTeachersModal(); }
   if(id === 'generate-envelopes'){ loadToken(); loadEnvelopeCourses(); }
+  if(id === 'group-overrides'){ loadToken(); goLoad(); }
   if(id === 'assign-cert'){
     document.getElementById('assign-cert-result').textContent = '';
     loadAssignCertCourses();
