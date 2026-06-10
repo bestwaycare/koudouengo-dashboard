@@ -704,6 +704,18 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         <div style="color:#999;font-size:.82rem;padding:8px 0">読み込み中…</div>
       </div>
 
+      <!-- メッセージ -->
+      <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">③ メッセージ（任意）</div>
+      <textarea id="teacher-message" rows="4"
+        placeholder="例）お世話になっております。今回の研修について、当日の持ち物をご確認ください。"
+        style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:.85rem;resize:vertical"></textarea>
+
+      <!-- 添付ファイル -->
+      <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">④ 追加の添付ファイル（任意）</div>
+      <input type="file" id="teacher-attachment" accept="*/*"
+        style="font-size:.82rem" onchange="onAttachmentSelected(this)">
+      <div id="attachment-status" style="margin-top:4px;font-size:.78rem;color:#888"></div>
+
       <div id="send-result" class="send-result"></div>
 
       <button class="modal-btn" style="background:#1a6b3c;margin-top:16px"
@@ -1631,6 +1643,7 @@ async function sendToTeachers(){
   const course = courseEl ? courseEl.value.trim() : '';
   const emails = [...document.querySelectorAll('#teacher-checklist input[type=checkbox]:checked')]
                    .map(cb => cb.value);
+  const message = (document.getElementById('teacher-message')?.value || '').trim();
   const result = document.getElementById('send-result');
   const btn    = document.getElementById('send-teacher-btn');
 
@@ -1645,6 +1658,23 @@ async function sendToTeachers(){
   btn.onclick = null;
 
   try {
+    // 添付ファイルがあれば先にリポジトリへアップロード
+    let attachmentFilename = '';
+    const fileInput = document.getElementById('teacher-attachment');
+    if(fileInput && fileInput.files.length > 0){
+      const file = fileInput.files[0];
+      btn.textContent = '⏳ ファイルをアップロード中…';
+      attachmentFilename = await uploadAttachmentToRepo(token, file);
+    }
+
+    btn.textContent = '⏳ 送信中…';
+    const inputs = {
+      course_name:    course,
+      teacher_emails: emails.join(','),
+    };
+    if(message)             inputs.message             = message;
+    if(attachmentFilename)  inputs.attachment_filename = attachmentFilename;
+
     const res = await fetch(
       `https://api.github.com/repos/${GH_REPO}/actions/workflows/${GH_WF}/dispatches`,
       {
@@ -1654,29 +1684,84 @@ async function sendToTeachers(){
           'Accept': 'application/vnd.github+json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          ref: 'main',
-          inputs: {
-            course_name:    course,
-            teacher_emails: emails.join(',')
-          }
-        })
+        body: JSON.stringify({ ref: 'main', inputs })
       }
     );
 
     if(res.status === 204){
       showSendResult(`✅ 送信ジョブを開始しました！\n数分後に ${emails.join('、')} へ届きます。`, true);
+      // 送信完了後にフォームをリセット
+      document.getElementById('teacher-message').value = '';
+      if(fileInput) fileInput.value = '';
+      document.getElementById('attachment-status').textContent = '';
     } else {
       const body = await res.json().catch(()=>({}));
       showSendResult('❌ エラー: ' + (body.message || res.status), false);
     }
   } catch(e) {
-    showSendResult('❌ 通信エラー: ' + e.message, false);
+    showSendResult('❌ ' + e.message, false);
   }
 
   btn.textContent = '📨 出席簿を送信する';
   btn.style.opacity = '1';
   btn.onclick = sendToTeachers;
+}
+
+async function uploadAttachmentToRepo(token, file) {
+  const filename = file.name;
+  const path = `attachments/${filename}`;
+
+  // ファイルをBase64に変換
+  const base64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  // 既存ファイルのSHAを取得（更新の場合に必要）
+  let sha = undefined;
+  try {
+    const chk = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${path}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if(chk.ok){ const d = await chk.json(); sha = d.sha; }
+  } catch(_){}
+
+  const body = {
+    message: `添付ファイルをアップロード: ${filename}`,
+    content: base64,
+  };
+  if(sha) body.sha = sha;
+
+  const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    throw new Error(`ファイルアップロード失敗: ${err.message || res.status}`);
+  }
+  return filename;
+}
+
+function onAttachmentSelected(input){
+  const statusEl = document.getElementById('attachment-status');
+  if(!statusEl) return;
+  if(input.files.length > 0){
+    const f = input.files[0];
+    const sizeKB = (f.size / 1024).toFixed(0);
+    statusEl.textContent = `📎 ${f.name}（${sizeKB} KB）— 送信時にリポジトリへアップロードされます`;
+    statusEl.style.color = '#1a6b3c';
+  } else {
+    statusEl.textContent = '';
+  }
 }
 
 function showSendResult(msg, ok){
