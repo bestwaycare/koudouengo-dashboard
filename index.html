@@ -918,11 +918,34 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
         style="font-size:.82rem" onchange="onEnvFileSelected(this,'env-attachment-status')">
       <div id="env-attachment-status" style="margin-top:4px;font-size:.78rem;color:#888"></div>
 
+      <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">⑤ Zoom情報（任意 — 入力すると「ZOOM演習資料送付」PDFを自動生成）</div>
+      <div style="background:#f5f0ff;border:1px solid #d4c5f9;border-radius:7px;padding:10px 12px;font-size:.8rem">
+        <div style="margin-bottom:6px;font-weight:600;color:#6c3483">練習会</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="zoom-practice-date" placeholder="例: 7月7日（火）" style="flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:.8rem">
+          <input id="zoom-practice-id" placeholder="ミーティングID" style="flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:.8rem">
+          <input id="zoom-practice-pass" placeholder="パスコード" style="width:80px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:.8rem">
+        </div>
+        <div style="margin-bottom:4px;font-weight:600;color:#6c3483">研修1日目</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="zoom-day1-id" placeholder="ミーティングID" style="flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:.8rem">
+          <input id="zoom-day1-pass" placeholder="パスコード" style="width:80px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:.8rem">
+        </div>
+        <div style="margin-bottom:4px;font-weight:600;color:#6c3483">研修2日目</div>
+        <div style="display:flex;gap:6px">
+          <input id="zoom-day2-id" placeholder="ミーティングID" style="flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:.8rem">
+          <input id="zoom-day2-pass" placeholder="パスコード" style="width:80px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:.8rem">
+        </div>
+      </div>
+
       <div class="modal-tip" style="margin-top:14px">
-        💡 生成されるPDF:<br>
+        💡 自動生成されるファイル:<br>
         &nbsp;&nbsp;・<b>角2封筒_宛名.pdf</b> — 受講生全員分（A→B順）<br>
-        &nbsp;&nbsp;・<b>長3封筒_A.pdf / B.pdf</b> — グループ別枚数分<br>
-        &nbsp;&nbsp;・<b>資料_A.pdf / 資料_B.pdf</b> — 名前入り（②③をアップした場合）<br>
+        &nbsp;&nbsp;・<b>長3封筒_A/B.pdf</b> — グループ別枚数分<br>
+        &nbsp;&nbsp;・<b>教材送付について.pdf</b> — 名前入り・全員分<br>
+        &nbsp;&nbsp;・<b>カリキュラム.xlsx</b> — 日付自動入力<br>
+        &nbsp;&nbsp;・<b>ZOOM演習資料送付.pdf</b> — ⑤入力時のみ<br>
+        &nbsp;&nbsp;・<b>資料_A/B.pdf</b> — ②③アップ時のみ（名前入り）<br>
         メールで届きます。そのまま印刷してください。
       </div>
 
@@ -2054,6 +2077,21 @@ async function generateEnvelopes() {
     const fileInput = document.getElementById('env-attachment');
     if(fileInput && fileInput.files.length > 0){
       inputs.attachment_filename = await uploadAttachmentToRepo(token, fileInput.files[0]);
+    }
+
+    // Zoom情報
+    const zd1id = document.getElementById('zoom-day1-id')?.value.trim();
+    if(zd1id){
+      const zoomData = {
+        practice_date: document.getElementById('zoom-practice-date')?.value.trim() || '',
+        practice_id:   document.getElementById('zoom-practice-id')?.value.trim() || '',
+        practice_pass: document.getElementById('zoom-practice-pass')?.value.trim() || '',
+        day1_id:       zd1id,
+        day1_pass:     document.getElementById('zoom-day1-pass')?.value.trim() || '',
+        day2_id:       document.getElementById('zoom-day2-id')?.value.trim() || '',
+        day2_pass:     document.getElementById('zoom-day2-pass')?.value.trim() || '',
+      };
+      inputs.zoom_data = JSON.stringify(zoomData);
     }
 
     btn.textContent = '⏳ 生成中…';
