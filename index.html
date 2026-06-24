@@ -903,16 +903,26 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       </select>
       <button onclick="loadEnvelopeCourses()" style="margin-top:4px;font-size:.75rem;padding:3px 10px;background:#ede7f6;border:1px solid #b39ddb;border-radius:4px;cursor:pointer">🔄 再読み込み</button>
 
-      <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">② 追加資料（任意）</div>
+      <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">② Aグループ資料PDF（名前入り印刷用・任意）</div>
+      <input type="file" id="env-material-a" accept="application/pdf"
+        style="font-size:.82rem" onchange="onEnvFileSelected(this,'env-material-a-status')">
+      <div id="env-material-a-status" style="margin-top:4px;font-size:.78rem;color:#888"></div>
+
+      <div style="margin-top:10px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">③ Bグループ資料PDF（名前入り印刷用・任意）</div>
+      <input type="file" id="env-material-b" accept="application/pdf"
+        style="font-size:.82rem" onchange="onEnvFileSelected(this,'env-material-b-status')">
+      <div id="env-material-b-status" style="margin-top:4px;font-size:.78rem;color:#888"></div>
+
+      <div style="margin-top:10px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">④ 追加資料（任意）</div>
       <input type="file" id="env-attachment" accept="application/pdf,*/*"
-        style="font-size:.82rem" onchange="onEnvAttachmentSelected(this)">
+        style="font-size:.82rem" onchange="onEnvFileSelected(this,'env-attachment-status')">
       <div id="env-attachment-status" style="margin-top:4px;font-size:.78rem;color:#888"></div>
 
       <div class="modal-tip" style="margin-top:14px">
         💡 生成されるPDF:<br>
         &nbsp;&nbsp;・<b>角2封筒_宛名.pdf</b> — 受講生全員分（A→B順）<br>
-        &nbsp;&nbsp;・<b>長3封筒_A.pdf</b> — Aグループ枚数分<br>
-        &nbsp;&nbsp;・<b>長3封筒_B.pdf</b> — Bグループ枚数分<br>
+        &nbsp;&nbsp;・<b>長3封筒_A.pdf / B.pdf</b> — グループ別枚数分<br>
+        &nbsp;&nbsp;・<b>資料_A.pdf / 資料_B.pdf</b> — 名前入り（②③をアップした場合）<br>
         メールで届きます。そのまま印刷してください。
       </div>
 
@@ -2027,17 +2037,26 @@ async function generateEnvelopes() {
   btn.onclick = null;
 
   try {
-    let attachmentFilename = '';
+    btn.textContent = '⏳ ファイルをアップロード中…';
+    const inputs = { course_name: course };
+
+    // A資料PDF
+    const matA = document.getElementById('env-material-a');
+    if(matA && matA.files.length > 0){
+      inputs.material_a_filename = await uploadAttachmentToRepo(token, matA.files[0]);
+    }
+    // B資料PDF
+    const matB = document.getElementById('env-material-b');
+    if(matB && matB.files.length > 0){
+      inputs.material_b_filename = await uploadAttachmentToRepo(token, matB.files[0]);
+    }
+    // 追加添付
     const fileInput = document.getElementById('env-attachment');
     if(fileInput && fileInput.files.length > 0){
-      btn.textContent = '⏳ ファイルをアップロード中…';
-      attachmentFilename = await uploadAttachmentToRepo(token, fileInput.files[0]);
+      inputs.attachment_filename = await uploadAttachmentToRepo(token, fileInput.files[0]);
     }
 
     btn.textContent = '⏳ 生成中…';
-    const inputs = { course_name: course };
-    if(attachmentFilename) inputs.attachment_filename = attachmentFilename;
-
     const res = await fetch(
       `https://api.github.com/repos/${GH_REPO}/actions/workflows/${GH_WF_ENV}/dispatches`,
       {
@@ -2052,9 +2071,10 @@ async function generateEnvelopes() {
     );
     if(res.status === 204){
       showEnvResult('✅ 生成ジョブを開始しました！\n数分後に staff@e-bestway.net へ届きます。', true);
-      if(fileInput) fileInput.value = '';
-      const st = document.getElementById('env-attachment-status');
-      if(st) st.textContent = '';
+      [matA, matB, fileInput].forEach(el => { if(el) el.value = ''; });
+      ['env-material-a-status','env-material-b-status','env-attachment-status'].forEach(id => {
+        const st = document.getElementById(id); if(st) st.textContent = '';
+      });
     } else {
       const body = await res.json().catch(()=>({}));
       showEnvResult('❌ エラー: ' + (body.message || res.status), false);
@@ -2076,8 +2096,8 @@ function showEnvResult(msg, ok){
   el.style.display = 'block';
 }
 
-function onEnvAttachmentSelected(input){
-  const st = document.getElementById('env-attachment-status');
+function onEnvFileSelected(input, statusId){
+  const st = document.getElementById(statusId);
   if(!st) return;
   if(input.files.length > 0){
     const f = input.files[0];
