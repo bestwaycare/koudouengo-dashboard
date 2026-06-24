@@ -903,15 +903,15 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
       </select>
       <button onclick="loadEnvelopeCourses()" style="margin-top:4px;font-size:.75rem;padding:3px 10px;background:#ede7f6;border:1px solid #b39ddb;border-radius:4px;cursor:pointer">🔄 再読み込み</button>
 
-      <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">② Aグループ資料PDF（名前入り印刷用・任意）</div>
+      <div style="margin-top:14px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">② Aグループ資料PDF（変更時のみアップ — 通常は自動）</div>
       <input type="file" id="env-material-a" accept="application/pdf"
         style="font-size:.82rem" onchange="onEnvFileSelected(this,'env-material-a-status')">
-      <div id="env-material-a-status" style="margin-top:4px;font-size:.78rem;color:#888"></div>
+      <div id="env-material-a-status" style="margin-top:4px;font-size:.78rem;color:#888">テンプレートから自動生成されます</div>
 
-      <div style="margin-top:10px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">③ Bグループ資料PDF（名前入り印刷用・任意）</div>
+      <div style="margin-top:10px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">③ Bグループ資料PDF（変更時のみアップ — 通常は自動）</div>
       <input type="file" id="env-material-b" accept="application/pdf"
         style="font-size:.82rem" onchange="onEnvFileSelected(this,'env-material-b-status')">
-      <div id="env-material-b-status" style="margin-top:4px;font-size:.78rem;color:#888"></div>
+      <div id="env-material-b-status" style="margin-top:4px;font-size:.78rem;color:#888">テンプレートから自動生成されます</div>
 
       <div style="margin-top:10px;margin-bottom:6px;font-size:.82rem;font-weight:600;color:#555">④ 追加資料（任意）</div>
       <input type="file" id="env-attachment" accept="application/pdf,*/*"
