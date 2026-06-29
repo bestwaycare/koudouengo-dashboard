@@ -483,6 +483,26 @@ body{font-family:"Hiragino Sans","BIZ UDGothic",sans-serif;
     </div>
 
     <div class="section">
+      <div class="section-title" style="background:#2471a3">データ管理</div>
+      <a class="item" onclick="syncKintone()">
+        <div class="item-icon blue">🔄</div>
+        <div class="item-text">スプレッドシート → kintone 同期
+          <div class="item-sub" id="sync-kintone-status">スプレッドシートの内容をkintoneに上書き反映</div>
+        </div>
+        <span class="item-badge badge-manual">手動</span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="item" href="https://docs.google.com/spreadsheets/d/1SP0afEBrGj19w6OvODOpqSohVn3kxpp6E6_-0w4stDI/edit" target="_blank">
+        <div class="item-icon blue">📊</div>
+        <div class="item-text">スプレッドシートを開く
+          <div class="item-sub">受講者データの編集・確認</div>
+        </div>
+        <span class="item-badge badge-ext">外部</span>
+        <span class="arrow">›</span>
+      </a>
+    </div>
+
+    <div class="section">
       <div class="section-title gray">確認・参照</div>
       <a class="item" onclick="openModal('check-mail')">
         <div class="item-icon gray">📧</div>
@@ -3231,6 +3251,27 @@ async function triggerAttendanceWorkflow(mode) {
 
 <script>
 const BOT_GAS_URL = 'https://script.google.com/macros/s/AKfycbxVQnalJ98zOH5-R6MPC7J9MmX80266NbO_uepLlzUscFiV1LrN2AdPTwPrfCsojzSCYA/exec';
+
+async function syncKintone(){
+  const st = document.getElementById('sync-kintone-status');
+  if(!st) return;
+  st.textContent = '⏳ 同期中…（数十秒かかります）';
+  st.style.color = '#2471a3';
+  try {
+    const res = await fetch(BOT_GAS_URL + '?action=syncToKintone', { redirect: 'follow' });
+    const data = await res.json();
+    if(data.success){
+      st.textContent = '✅ ' + (data.summary || '同期完了');
+      st.style.color = '#1e8449';
+    } else {
+      st.textContent = '❌ エラー: ' + (data.error || '不明');
+      st.style.color = '#c0392b';
+    }
+  } catch(e){
+    st.textContent = '❌ 通信エラー: ' + e.message;
+    st.style.color = '#c0392b';
+  }
+}
 let botHistory = [];  // { role, content }[]
 let botOpen = false;
 
