@@ -369,11 +369,11 @@
   <div class="tab-group">
     <button class="tab active" onclick="switchTab('koudo')">
       📋 行動援護シート
-      <span class="badge badge-blue" style="margin-left:4px">注文IDキー</span>
+      <span class="badge badge-blue" style="margin-left:4px">既存があれば更新</span>
     </button>
     <button class="tab" onclick="switchTab('userdetail')">
       👤 ユーザー詳細CSV
-      <span class="badge badge-purple" style="margin-left:4px">姓＋名キー</span>
+      <span class="badge badge-purple" style="margin-left:4px">既存があれば更新</span>
     </button>
   </div>
 
@@ -383,7 +383,8 @@
       <div class="card-title">行動援護シート</div>
       <p style="color:var(--text-muted);font-size:12px;margin-bottom:16px">
         シート名を確認して「データ取得」を押してください。<br>
-        キー：注文ID　／　GAS経由でスプレッドシートを直接読み込みます
+        照合：注文ID →氏名 →フリガナ の順（スペースの有無は無視）。<br>
+        一致すれば上書き更新、なければ新規登録します。
       </p>
       <div class="field">
         <label>シート名</label>
@@ -406,7 +407,8 @@
       <div class="card-title">ユーザー詳細CSV（Shift-JIS）</div>
       <p style="color:var(--text-muted);font-size:12px;margin-bottom:16px">
         システムからエクスポートしたユーザー詳細CSVをアップロードしてください。<br>
-        キー：姓＋名（全角スペース）　／　エンコード：Shift-JIS を自動変換
+        照合：氏名 →フリガナ の順（スペースの有無は無視）。一致すれば上書き更新。<br>
+        エンコード：Shift-JIS を自動変換
       </p>
       <div class="drop-zone" id="dz-userdetail">
         <input type="file" accept=".csv" id="file-userdetail" onchange="loadFile('userdetail')">
@@ -800,16 +802,28 @@ function _gasPost(action, data, cb) {
   .catch(function(e) { cb({ error: e.message }); });
 }
 
+// 既存レコードを探す。
+// GAS 側で「注文ID → 氏名（姓+名／氏名フィールド）→ フリガナ」の順に照合し、
+// スペースの有無・コース名の表記ゆれを吸収する。
+// 一致すれば更新、しなければ新規作成になる。
 function searchRecord(baseUrl, apiToken, name, record, cb) {
-  var query;
-  if (name === 'koudo') {
-    query = '注文ID = "' + record._key + '"';
-  } else {
-    query = '姓 = "' + record['姓'] + '" and 名 = "' + record['名'] + '"';
-  }
   var subdomain = document.getElementById('subdomain').value.trim();
-  _gasPost('kintoneSearch', { subdomain: subdomain, appId: APP_ID, apiToken: apiToken, query: query }, function(data) {
-    cb(data.found ? data.id : null);
+  _gasPost('kintoneFindPerson', {
+    subdomain: subdomain,
+    appId:     APP_ID,
+    apiToken:  apiToken,
+    orderId:   name === 'koudo' ? record['注文ID'] : '',
+    surname:   record['姓'],
+    given:     record['名'],
+    furigana:  record['フリガナ'],
+    course:    record['コース名']
+  }, function(data) {
+    if (data && data.found) {
+      addLog('ok', '既存レコードに一致（' + data.by + '）: ' + record._key + ' → レコード' + data.id);
+      cb(data.id);
+    } else {
+      cb(null);
+    }
   });
 }
 
