@@ -762,11 +762,16 @@ function startUpload(name) {
           processNext();
         });
       } else {
-        // 新規登録
-        postRecord(baseUrl, apiToken, kintoneRecord, function(ok, msg) {
+        // 新規登録（GAS側でも重複確認するため、既存が見つかれば更新になる）
+        postRecord(baseUrl, apiToken, kintoneRecord, function(ok, msg, res) {
           if (ok) {
             cntOk++;
-            addLog('ok', '新規: ' + record._key);
+            if (res && res.merged) {
+              addLog('ok', '更新: ' + record._key +
+                           '（既存レコード' + res.id + ' に' + res.by + 'で一致）');
+            } else {
+              addLog('ok', '新規: ' + record._key);
+            }
           } else {
             cntErr++;
             addLog('err', 'エラー: ' + record._key + ' / ' + msg);
@@ -867,7 +872,7 @@ function buildKintoneRecord(name, record) {
 function postRecord(baseUrl, apiToken, record, cb) {
   var subdomain = document.getElementById('subdomain').value.trim();
   _gasPost('kintoneUpsert', { subdomain: subdomain, appId: APP_ID, apiToken: apiToken, record: record }, function(d) {
-    cb(d.ok === true, d.error || '');
+    cb(d.ok === true, d.error || '', d);
   });
 }
 
