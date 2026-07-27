@@ -746,7 +746,7 @@ function startUpload(name) {
     updateProgress();
 
     // 既存レコードを検索
-    searchRecord(baseUrl, apiToken, name, record, function(existingId) {
+    searchRecord(baseUrl, apiToken, name, record, function(existingId, matchedBy) {
       var kintoneRecord = buildKintoneRecord(name, record);
 
       if (existingId) {
@@ -754,7 +754,9 @@ function startUpload(name) {
         putRecord(baseUrl, apiToken, existingId, kintoneRecord, function(ok, msg) {
           if (ok) {
             cntOk++;
-            addLog('ok', '更新: ' + record._key);
+            addLog('ok', '更新: ' + record._key +
+                         '（既存レコード' + existingId +
+                         (matchedBy ? ' に' + matchedBy + 'で一致' : '') + '）');
           } else {
             cntErr++;
             addLog('err', 'エラー: ' + record._key + ' / ' + msg);
@@ -824,10 +826,9 @@ function searchRecord(baseUrl, apiToken, name, record, cb) {
     course:    record['コース名']
   }, function(data) {
     if (data && data.found) {
-      addLog('ok', '既存レコードに一致（' + data.by + '）: ' + record._key + ' → レコード' + data.id);
-      cb(data.id);
+      cb(data.id, data.by || '');
     } else {
-      cb(null);
+      cb(null, '');
     }
   });
 }
