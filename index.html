@@ -1980,7 +1980,7 @@ async function goLoad() {
       const lines = csv.split('\n').filter(l => l.trim());
       // skip header
       for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(',');
+        const parts = parseCsvLine(lines[i]);
         if (parts.length >= 3) {
           goRows.push({ course_name: parts[0].trim(), name: parts[1].trim(), side: parts[2].trim() });
         }
@@ -2031,11 +2031,44 @@ function goDeleteRow(i) {
   goRender();
 }
 
+// コース名などにカンマが含まれる場合に備えた最小限のCSVパーサー・エスケープ。
+// ダブルクォートで囲まれたフィールド内のカンマ・改行・エスケープした""を扱える。
+function parseCsvLine(line) {
+  const out = [];
+  let cur = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else { inQuotes = false; }
+      } else {
+        cur += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      out.push(cur); cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function csvField(v) {
+  v = String(v);
+  return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+}
+
 async function goSave() {
   const token = localStorage.getItem('gh_token');
   if (!token) { alert('GitHubトークンを設定してください'); return; }
   const valid = goRows.filter(r => r.course_name && r.name && r.side);
-  const csv = 'course_name,name,side\n' + valid.map(r => `${r.course_name},${r.name},${r.side}`).join('\n') + '\n';
+  const csv = 'course_name,name,side\n' + valid.map(r =>
+    [r.course_name, r.name, r.side].map(csvField).join(',')
+  ).join('\n') + '\n';
   const content = btoa(unescape(encodeURIComponent(csv)));
 
   // 現在の SHA を取得
