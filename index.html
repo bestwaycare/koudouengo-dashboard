@@ -1971,7 +1971,12 @@ async function goLoad() {
     if (res.ok) {
       const data = await res.json();
       const raw = data.content || '';
-      const csv = raw ? atob(raw.replace(/\n/g, '')) : '';
+      // atob() は1バイト=1文字として復元するため、そのままだと日本語（UTF-8マルチバイト）が
+      // 文字化けする。TextDecoder で正しく UTF-8 として復元する。
+      const csv = raw
+        ? new TextDecoder('utf-8').decode(
+            Uint8Array.from(atob(raw.replace(/\n/g, '')), ch => ch.charCodeAt(0)))
+        : '';
       const lines = csv.split('\n').filter(l => l.trim());
       // skip header
       for (let i = 1; i < lines.length; i++) {
